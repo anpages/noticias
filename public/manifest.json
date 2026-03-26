@@ -1,6 +1,6 @@
 {
-  "name": "RSS Reader",
-  "short_name": "RSS",
+  "name": "Noticias RSS",
+  "short_name": "Noticias",
   "description": "Tu lector de noticias RSS personalizado",
   "start_url": "/reader",
   "display": "standalone",

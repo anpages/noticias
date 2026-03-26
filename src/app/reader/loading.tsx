@@ -31,7 +31,7 @@ export default function ReaderLoading() {
         style={{ fontSize: 18, fontWeight: 600, fontFamily: "system-ui, -apple-system, sans-serif" }}
         className="text-neutral-900 dark:text-neutral-100"
       >
-        RSS Reader
+        Noticias RSS
       </span>
     </div>
   );

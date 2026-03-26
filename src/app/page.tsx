@@ -16,7 +16,7 @@ export default async function HomePage() {
           </div>
         </div>
         <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
-          RSS Reader
+          Noticias RSS
         </h1>
         <p className="text-neutral-500 dark:text-neutral-400 mb-8 max-w-sm">
           Tu lector de noticias RSS. Añade tus fuentes favoritas y lee todo en un solo lugar.

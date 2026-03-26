@@ -1,8 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#3b82f6"/>
-  <path d="M128 160 C128 160 128 352 128 352" stroke="white" stroke-width="0" fill="none"/>
-  <!-- RSS icon centered -->
-  <circle cx="176" cy="336" r="36" fill="white"/>
-  <path d="M176 272 C248 272 304 328 304 400" stroke="white" stroke-width="40" fill="none" stroke-linecap="round"/>
-  <path d="M176 192 C296 192 384 280 384 400" stroke="white" stroke-width="40" fill="none" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background with gradient -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  <!-- Subtle shine overlay -->
+  <rect width="512" height="512" rx="128" fill="url(#shine)"/>
+  <!-- RSS signal waves -->
+  <path d="M152 360 A208 208 0 0 1 360 152" stroke="white" stroke-opacity="0.25" stroke-width="36" fill="none" stroke-linecap="round"/>
+  <path d="M152 280 A128 128 0 0 1 280 152" stroke="white" stroke-opacity="0.5" stroke-width="36" fill="none" stroke-linecap="round"/>
+  <path d="M152 200 A48 48 0 0 1 200 152" stroke="white" stroke-width="36" fill="none" stroke-linecap="round"/>
+  <!-- Signal dot -->
+  <circle cx="152" cy="360" r="32" fill="white"/>
 </svg>

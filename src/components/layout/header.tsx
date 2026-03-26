@@ -31,7 +31,7 @@ export function Header({ showMenuButton, onMenuClick }: HeaderProps) {
         )}
         <Rss size={20} className="text-blue-500" />
         <span className="font-semibold text-sm text-neutral-900 dark:text-neutral-100">
-          RSS Reader
+          Noticias RSS
         </span>
       </div>
 

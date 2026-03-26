@@ -6,13 +6,13 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { SWRegister } from "@/components/providers/sw-register";
 
 export const metadata: Metadata = {
-  title: "RSS Reader",
+  title: "Noticias RSS",
   description: "Tu lector de noticias RSS personalizado",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "RSS Reader",
+    title: "Noticias RSS",
   },
 };
 

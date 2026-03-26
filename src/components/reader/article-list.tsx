@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useArticles } from "@/hooks/use-articles";
 import { useReadObserver } from "@/hooks/use-read-observer";
@@ -43,6 +43,25 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
   );
 
   const { observe, unobserve } = useReadObserver(handleRead, mainRef);
+
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
@@ -107,22 +126,17 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
         />
       ))}
 
-      {hasNextPage && (
-        <div className="flex justify-center pt-2">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-sm"
-          >
-            {isFetchingNextPage
-              ? <><Loader2 size={14} className="animate-spin" /> Cargando...</>
-              : "Cargar más"}
-          </button>
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} style={{ height: 1 }} />
+
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <Loader2 size={18} className="animate-spin text-neutral-400 dark:text-neutral-500" />
         </div>
       )}
 
-      {!hasNextPage && (
-        <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 pt-4">
+      {!hasNextPage && allArticles.length > 0 && (
+        <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 py-4">
           {allArticles.length} artículo{allArticles.length !== 1 ? "s" : ""}
         </p>
       )}

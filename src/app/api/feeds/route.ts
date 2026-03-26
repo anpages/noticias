@@ -33,6 +33,12 @@ export async function POST(req: Request) {
 
   const { url, type } = parsed.data;
 
+  // Limit feeds per user
+  const existing = await getUserFeeds(session.user.id);
+  if (existing.length >= 50) {
+    return NextResponse.json({ error: "Máximo 50 feeds permitidos." }, { status: 400 });
+  }
+
   let feedData;
   try {
     feedData = await fetchFeedByType(url, type as FeedType);

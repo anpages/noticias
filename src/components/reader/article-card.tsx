@@ -21,7 +21,6 @@ export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: Art
     if (!el) return;
     onObserve(el);
     return () => onUnobserve(el);
-  // onObserve changes identity when scrolled changes, triggering re-registration
   }, [onObserve, onUnobserve]);
 
   return (

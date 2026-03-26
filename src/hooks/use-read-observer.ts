@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const FLUSH_INTERVAL = 2000;
 
@@ -9,7 +9,8 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const onReadRef = useRef(onRead);
-  const [scrolled, setScrolled] = useState(false);
+  const hasScrolledRef = useRef(false); // ref, not state — visible in observer callback instantly
+
   onReadRef.current = onRead;
 
   const flush = useCallback(() => {
@@ -19,21 +20,16 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
     onReadRef.current(ids);
   }, []);
 
-  // Only activate after the user has scrolled
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(true);
-      window.removeEventListener("scroll", onScroll, true);
-    };
-    window.addEventListener("scroll", onScroll, true);
-    return () => window.removeEventListener("scroll", onScroll, true);
-  }, []);
-
-  useEffect(() => {
-    if (!scrolled) return;
+    // Track scroll with a ref so the observer callback sees it without recreating
+    const onScroll = () => { hasScrolledRef.current = true; };
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
+        // Ignore all intersections until the user has actually scrolled
+        if (!hasScrolledRef.current) return;
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const id = (entry.target as HTMLElement).dataset.articleId;
@@ -50,19 +46,20 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
     );
 
     return () => {
+      window.removeEventListener("scroll", onScroll, true);
       observerRef.current?.disconnect();
       if (timerRef.current) clearTimeout(timerRef.current);
       flush();
     };
-  }, [scrolled, flush]);
+  }, [flush]);
 
   const observe = useCallback((el: HTMLElement | null) => {
-    if (el && observerRef.current) observerRef.current.observe(el);
-  }, [scrolled]); // re-run when scrolled changes so cards re-register
+    if (el) observerRef.current?.observe(el);
+  }, []);
 
   const unobserve = useCallback((el: HTMLElement | null) => {
     if (el) observerRef.current?.unobserve(el);
   }, []);
 
-  return { observe, unobserve, scrolled };
+  return { observe, unobserve };
 }

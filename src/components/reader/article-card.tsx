@@ -34,52 +34,41 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve }: Article
           : "border-neutral-200 dark:border-neutral-700/60 hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg hover:shadow-neutral-200/60 dark:hover:shadow-black/40"
       )}
     >
-      {/* Hero image */}
-      {article.imageUrl && (
-        <a
-          href={article.url ?? undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block overflow-hidden"
-          tabIndex={isRead ? -1 : 0}
-        >
-          <div className="relative w-full bg-neutral-100 dark:bg-neutral-800" style={{ height: isRead ? 0 : undefined }}>
-            {!isRead && (
-              <div className="relative w-full h-44 sm:h-52 overflow-hidden">
-                <Image
-                  src={article.imageUrl}
-                  alt={article.title ?? ""}
-                  fill
-                  className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                  sizes="(max-width: 640px) 100vw, 672px"
-                  onError={(e) => {
-                    const wrapper = (e.target as HTMLImageElement).closest("a");
-                    if (wrapper) wrapper.style.display = "none";
-                  }}
-                />
-              </div>
-            )}
+      {/* Hero image — only when unread */}
+      {!isRead && article.imageUrl && (
+        <a href={article.url ?? undefined} target="_blank" rel="noopener noreferrer">
+          {/* height must be explicit for next/image fill to work */}
+          <div style={{ position: "relative", width: "100%", height: 192 }} className="bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+            <Image
+              src={article.imageUrl}
+              alt={article.title ?? ""}
+              fill
+              className="object-cover group-hover:scale-[1.03] transition-transform duration-500"
+              sizes="(max-width: 640px) 100vw, 672px"
+              onError={(e) => {
+                const wrapper = (e.target as HTMLImageElement).closest("a");
+                if (wrapper) wrapper.style.display = "none";
+              }}
+            />
           </div>
         </a>
       )}
 
-      <div className={cn("p-4", isRead && "py-3")}>
-        {/* Feed + date row */}
+      <div className="p-4">
+        {/* Feed + date */}
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="shrink-0">
-            {article.feedFavicon ? (
-              <Image
-                src={article.feedFavicon}
-                alt=""
-                width={12}
-                height={12}
-                className="rounded-sm"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            ) : (
-              <Rss size={11} className="text-neutral-300 dark:text-neutral-600" />
-            )}
-          </span>
+          {article.feedFavicon ? (
+            <Image
+              src={article.feedFavicon}
+              alt=""
+              width={12}
+              height={12}
+              className="rounded-sm shrink-0"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <Rss size={11} className="text-neutral-300 dark:text-neutral-600 shrink-0" />
+          )}
           <span className="text-xs text-neutral-400 dark:text-neutral-500 truncate max-w-[160px]">
             {article.feedTitle || "Feed"}
           </span>
@@ -91,13 +80,13 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve }: Article
 
         {/* Title */}
         <h2 className={cn(
-          "font-semibold leading-snug transition-colors",
+          "text-sm font-semibold leading-snug transition-colors",
           isRead
-            ? "text-sm text-neutral-400 dark:text-neutral-500"
-            : "text-sm sm:text-base text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+            ? "text-neutral-400 dark:text-neutral-500"
+            : "text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400"
         )}>
           {article.url ? (
-            <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:underline decoration-1 underline-offset-2">
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:underline underline-offset-2 decoration-1">
               {article.title || "(Sin título)"}
             </a>
           ) : (
@@ -107,7 +96,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve }: Article
 
         {/* Summary — only when unread */}
         {!isRead && article.summary && (
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+          <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
             {article.summary}
           </p>
         )}

@@ -125,7 +125,10 @@ export async function insertArticles(feedId: string, items: FeedItem[]) {
   const result = await db
     .insert(articles)
     .values(values)
-    .onConflictDoNothing({ target: [articles.feedId, articles.guid] })
+    .onConflictDoUpdate({
+      target: [articles.feedId, articles.guid],
+      set: { imageUrl: sql`excluded.image_url` },
+    })
     .returning({ id: articles.id });
 
   return result.length;

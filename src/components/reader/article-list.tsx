@@ -6,18 +6,20 @@ import { useArticles } from "@/hooks/use-articles";
 import { useReadObserver } from "@/hooks/use-read-observer";
 import { useSync } from "@/hooks/use-sync";
 import { ArticleCard } from "./article-card";
-import { Loader2, RefreshCw, Inbox } from "lucide-react";
+import { CheckCheck, Inbox, Loader2, RefreshCw } from "lucide-react";
 
 interface ArticleListProps {
   feedId: string | null;
   mainRef: React.RefObject<HTMLElement | null>;
+  onArticleClick: (id: string) => void;
 }
 
-export function ArticleList({ feedId, mainRef }: ArticleListProps) {
+export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProps) {
   useSync();
 
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [markingAll, setMarkingAll] = useState(false);
 
   const {
     data,
@@ -28,6 +30,10 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
     isError,
     refetch,
   } = useArticles(feedId);
+
+  // Derive articles early so callbacks can reference it
+  const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
+
 
   const handleRead = useCallback(
     (ids: string[]) => {
@@ -42,46 +48,68 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
     [queryClient]
   );
 
+  const syncAndRefresh = useCallback(() => {
+    return fetch("/api/sync", { method: "POST" })
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ["articles", feedId] });
+        queryClient.invalidateQueries({ queryKey: ["feeds"] });
+      })
+      .catch(() => {});
+  }, [queryClient, feedId]);
+
+  const handleMarkRead = useCallback(
+    (id: string) => {
+      handleRead([id]);
+      syncAndRefresh();
+    },
+    [handleRead, syncAndRefresh]
+  );
+
+  const handleMarkAllRead = useCallback(async () => {
+    const unreadIds = allArticles.filter((a) => !readIds.has(a.id)).map((a) => a.id);
+    if (unreadIds.length === 0) return;
+    setMarkingAll(true);
+    handleRead(unreadIds);
+    await syncAndRefresh();
+    setMarkingAll(false);
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [allArticles, readIds, handleRead, syncAndRefresh, mainRef]);
+
   const { observe, unobserve } = useReadObserver(handleRead, mainRef);
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasNextPageRef = useRef(hasNextPage);
+  const isFetchingRef = useRef(isFetchingNextPage);
+  const fetchNextPageRef = useRef(fetchNextPage);
+  hasNextPageRef.current = hasNextPage;
+  isFetchingRef.current = isFetchingNextPage;
+  fetchNextPageRef.current = fetchNextPage;
+
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    const container = mainRef.current;
+    if (!sentinel || !container) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (entries[0].isIntersecting && hasNextPageRef.current && !isFetchingRef.current) {
+          fetchNextPageRef.current();
         }
       },
-      { threshold: 0.1 }
+      { root: container, threshold: 0, rootMargin: "0px 0px 200px 0px" }
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainRef]);
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden animate-pulse">
-            <div className="h-44 bg-neutral-100 dark:bg-neutral-800" />
-            <div className="p-4 space-y-2">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded bg-neutral-200 dark:bg-neutral-700" />
-                <div className="w-20 h-3 rounded bg-neutral-100 dark:bg-neutral-800" />
-              </div>
-              <div className="w-4/5 h-4 rounded bg-neutral-200 dark:bg-neutral-700" />
-              <div className="w-full h-3 rounded bg-neutral-100 dark:bg-neutral-800" />
-              <div className="w-3/5 h-3 rounded bg-neutral-100 dark:bg-neutral-800" />
-            </div>
-          </div>
-        ))}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 120, gap: 16 }}>
+        <Loader2 size={24} className="animate-spin text-blue-500" />
+        <span className="text-sm text-neutral-400 dark:text-neutral-500">Cargando noticias...</span>
       </div>
     );
   }
@@ -114,6 +142,8 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
     );
   }
 
+  const hasUnread = allArticles.some((a) => !readIds.has(a.id));
+
   return (
     <div className="space-y-3 pb-8">
       {allArticles.map((article) => (
@@ -123,6 +153,8 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
           isRead={readIds.has(article.id)}
           onObserve={observe}
           onUnobserve={unobserve}
+          onMarkRead={handleMarkRead}
+          onClick={() => onArticleClick(article.id)}
         />
       ))}
 
@@ -135,7 +167,23 @@ export function ArticleList({ feedId, mainRef }: ArticleListProps) {
         </div>
       )}
 
-      {!hasNextPage && allArticles.length > 0 && (
+      {/* Mark all read button — always visible when there are unread articles */}
+      {hasUnread && (
+        <div className="flex flex-col items-center gap-2 py-6">
+          <button
+            onClick={handleMarkAllRead}
+            disabled={markingAll}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            {markingAll
+              ? <><Loader2 size={14} className="animate-spin" /> Actualizando...</>
+              : <><CheckCheck size={14} className="text-green-500" /> Marcar sección como leída</>
+            }
+          </button>
+        </div>
+      )}
+
+      {!hasUnread && allArticles.length > 0 && (
         <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 py-4">
           {allArticles.length} artículo{allArticles.length !== 1 ? "s" : ""}
         </p>

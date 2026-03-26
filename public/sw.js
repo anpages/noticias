@@ -1,4 +1,4 @@
-const CACHE_NAME = "rss-reader-v1";
+const CACHE_NAME = "rss-reader-v2";
 const APP_SHELL = ["/", "/reader"];
 
 self.addEventListener("install", (event) => {
@@ -31,8 +31,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
-  if (request.destination === "image" || request.destination === "font" || request.destination === "style" || request.destination === "script") {
+  // Cache-first only for images and fonts
+  if (request.destination === "image" || request.destination === "font") {
     event.respondWith(
       caches.match(request).then((cached) => cached || fetch(request).then((res) => {
         const clone = res.clone();
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for navigation
+  // Network-first for everything else (scripts, styles, navigation)
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddFeedForm } from "@/components/feeds/add-feed-form";
 import { FeedItem } from "@/components/feeds/feed-item";
-import { Rss, RefreshCw, X } from "lucide-react";
+import { Rss, RefreshCw, X, PanelLeftClose } from "lucide-react";
 
 interface Feed {
   id: string;
@@ -21,6 +21,7 @@ interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
   isDrawer?: boolean;
+  onCollapse?: () => void;
 }
 
 function SidebarContent({
@@ -28,11 +29,13 @@ function SidebarContent({
   onFeedSelect,
   onClose,
   isDrawer,
+  onCollapse,
 }: {
   activeFeedId: string | null;
   onFeedSelect: (id: string | null) => void;
   onClose?: () => void;
   isDrawer?: boolean;
+  onCollapse?: () => void;
 }) {
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
@@ -58,7 +61,7 @@ function SidebarContent({
     if (isDrawer) onClose?.();
   }
 
-  const totalUnread = feeds.reduce((acc, f) => acc + (f.unreadCount || 0), 0);
+  const totalUnread = feeds.reduce((acc, f) => acc + (Number(f.unreadCount) || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -78,6 +81,16 @@ function SidebarContent({
           >
             <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
           </button>
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              title="Ocultar sidebar"
+              style={{ padding: 6, borderRadius: 6 }}
+              className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            >
+              <PanelLeftClose size={14} />
+            </button>
+          )}
           {isDrawer && (
             <button
               onClick={onClose}
@@ -137,7 +150,7 @@ function SidebarContent({
   );
 }
 
-export function Sidebar({ activeFeedId, onFeedSelect, open = false, onClose, isDrawer = false }: SidebarProps) {
+export function Sidebar({ activeFeedId, onFeedSelect, open = false, onClose, isDrawer = false, onCollapse }: SidebarProps) {
   if (isDrawer) {
     return (
       <>
@@ -175,12 +188,13 @@ export function Sidebar({ activeFeedId, onFeedSelect, open = false, onClose, isD
   // Desktop: inline sidebar
   return (
     <div
-      style={{ width: 256, flexShrink: 0, overflow: "hidden", height: "100%" }}
+      style={{ width: 256, minWidth: 256, overflow: "hidden", height: "100%" }}
       className="bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800"
     >
       <SidebarContent
         activeFeedId={activeFeedId}
         onFeedSelect={onFeedSelect}
+        onCollapse={onCollapse}
       />
     </div>
   );

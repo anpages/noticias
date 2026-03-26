@@ -23,7 +23,7 @@ export async function getUserFeeds(userId: string) {
             WHERE rs.article_id = ${articles.id}
             AND rs.user_id = ${userId}
           )
-        )
+        )::int
       `.as("unread_count"),
     })
     .from(feeds)
@@ -108,6 +108,30 @@ export async function getArticles(
   return { articles: items, nextCursor };
 }
 
+export async function getArticleById(userId: string, articleId: string) {
+  const row = await db
+    .select({
+      id: articles.id,
+      feedId: articles.feedId,
+      title: articles.title,
+      url: articles.url,
+      summary: articles.summary,
+      content: articles.content,
+      author: articles.author,
+      imageUrl: articles.imageUrl,
+      publishedAt: articles.publishedAt,
+      feedTitle: feeds.title,
+      feedFavicon: feeds.favicon,
+      feedSiteUrl: feeds.siteUrl,
+    })
+    .from(articles)
+    .innerJoin(feeds, eq(feeds.id, articles.feedId))
+    .where(and(eq(articles.id, articleId), eq(feeds.userId, userId)))
+    .limit(1);
+
+  return row[0] ?? null;
+}
+
 export async function insertArticles(feedId: string, items: FeedItem[]) {
   if (items.length === 0) return 0;
 
@@ -117,6 +141,7 @@ export async function insertArticles(feedId: string, items: FeedItem[]) {
     title: item.title,
     url: item.url,
     summary: item.summary,
+    content: item.content,
     author: item.author,
     imageUrl: item.imageUrl,
     publishedAt: item.publishedAt,
@@ -127,7 +152,7 @@ export async function insertArticles(feedId: string, items: FeedItem[]) {
     .values(values)
     .onConflictDoUpdate({
       target: [articles.feedId, articles.guid],
-      set: { imageUrl: sql`excluded.image_url` },
+      set: { imageUrl: sql`excluded.image_url`, content: sql`COALESCE(excluded.content, ${articles.content})` },
     })
     .returning({ id: articles.id });
 

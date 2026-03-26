@@ -29,6 +29,7 @@ export interface FeedItem {
   title: string | null;
   url: string | null;
   summary: string | null;
+  content: string | null;
   author: string | null;
   imageUrl: string | null;
   publishedAt: Date | null;
@@ -113,8 +114,10 @@ export async function fetchFeed(feedUrl: string): Promise<FeedData> {
 
   const items: FeedItem[] = (feed.items || []).map((item) => {
     const guid = item.guid || item.link || (item as { id?: string }).id || `${feedUrl}-${Date.now()}-${Math.random()}`;
-    const rawSummary = item.contentSnippet || item.content || (item as { summary?: string; description?: string }).summary || (item as { description?: string }).description || "";
+    const rawContent = (item as CustomItem)["content:encoded"] || item.content || (item as { description?: string }).description || "";
+    const rawSummary = item.contentSnippet || (item as { summary?: string }).summary || rawContent;
     const summary = extractText(rawSummary).slice(0, 400) || null;
+    const content = rawContent || null;
     const imageUrl = extractImage(item as CustomItem & { content?: string });
 
     let publishedAt: Date | null = null;
@@ -131,6 +134,7 @@ export async function fetchFeed(feedUrl: string): Promise<FeedData> {
       title: item.title ? extractText(item.title) : null,
       url: item.link || null,
       summary,
+      content,
       author: (item as { creator?: string; author?: string }).creator || (item as { author?: string }).author || null,
       imageUrl,
       publishedAt,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Trash2, Rss } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,9 @@ interface FeedItemProps {
   onClick: () => void;
 }
 
-export function FeedItem({ id, title, url, favicon, unreadCount, isActive, onClick }: FeedItemProps) {
+export function FeedItem({ id, title, url, favicon, unreadCount: rawCount, isActive, onClick }: FeedItemProps) {
+  const unreadCount = Number(rawCount) || 0;
+  const [imgError, setImgError] = useState(false);
   const queryClient = useQueryClient();
 
   async function handleDelete(e: React.MouseEvent) {
@@ -30,24 +33,27 @@ export function FeedItem({ id, title, url, favicon, unreadCount, isActive, onCli
   const displayTitle = title || new URL(url).hostname;
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={cn(
-        "group w-full flex items-center gap-2 px-3 py-2 rounded-md text-left text-sm transition-colors",
+        "group w-full flex items-center gap-2 px-3 py-2 rounded-md text-left text-sm transition-colors cursor-pointer",
         isActive
           ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
           : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
       )}
     >
       <span className="shrink-0 w-4 h-4 flex items-center justify-center">
-        {favicon ? (
+        {favicon && !imgError ? (
           <Image
             src={favicon}
             alt=""
             width={14}
             height={14}
             className="rounded-sm"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            onError={() => setImgError(true)}
           />
         ) : (
           <Rss size={12} className="text-neutral-400" />
@@ -66,6 +72,6 @@ export function FeedItem({ id, title, url, favicon, unreadCount, isActive, onCli
       >
         <Trash2 size={13} />
       </button>
-    </button>
+    </div>
   );
 }

@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 
 export function useIsDesktop(breakpoint = 768) {
-  const [isDesktop, setIsDesktop] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth >= breakpoint;
-  });
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia(`(min-width: ${breakpoint}px)`);

@@ -74,6 +74,7 @@ export function ArticleList({ feedId }: ArticleListProps) {
   );
 
   const { observe, unobserve } = useReadObserver(handleRead);
+  // observe/unobserve identity changes when user first scrolls — cards re-register automatically
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 

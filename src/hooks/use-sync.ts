@@ -3,13 +3,19 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+const SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const SYNC_KEY = "rss-last-sync";
+
 export function useSync() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const key = "rss-synced";
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, "1");
+    const lastSync = Number(localStorage.getItem(SYNC_KEY) || "0");
+    const now = Date.now();
+
+    if (now - lastSync < SYNC_INTERVAL_MS) return;
+
+    localStorage.setItem(SYNC_KEY, String(now));
 
     fetch("/api/sync", { method: "POST" })
       .then((r) => r.json())

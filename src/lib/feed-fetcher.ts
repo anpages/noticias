@@ -149,3 +149,13 @@ export async function fetchFeed(feedUrl: string): Promise<FeedData> {
     items,
   };
 }
+
+export type FeedType = "rss" | "steam";
+
+export async function fetchFeedByType(feedUrl: string, type: FeedType): Promise<FeedData> {
+  if (type === "steam") {
+    const { fetchSteamFeed } = await import("./steam-fetcher");
+    return fetchSteamFeed(feedUrl);
+  }
+  return fetchFeed(feedUrl);
+}

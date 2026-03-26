@@ -1,10 +1,10 @@
 import { auth } from "@/auth";
-import { upsertReadStatus } from "@/lib/queries";
+import { deleteArticles } from "@/lib/queries";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const schema = z.object({
-  articleIds: z.array(z.string()).min(1).max(100),
+  articleIds: z.array(z.string()).min(1).max(500),
 });
 
 export async function POST(req: Request) {
@@ -15,6 +15,6 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid" }, { status: 400 });
 
-  await upsertReadStatus(session.user.id, parsed.data.articleIds);
+  await deleteArticles(session.user.id, parsed.data.articleIds);
   return NextResponse.json({ success: true });
 }

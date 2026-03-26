@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Search, X } from "lucide-react";
+import { Gamepad2, Loader2, Plus, Rss, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+
+type FeedTab = "rss" | "steam";
+
+const TABS: { key: FeedTab; label: string; icon: React.ReactNode; placeholder: string }[] = [
+  { key: "rss", label: "RSS", icon: <Rss size={11} />, placeholder: "Buscar feeds..." },
+  { key: "steam", label: "Steam", icon: <Gamepad2 size={11} />, placeholder: "Buscar juegos..." },
+];
 
 interface SearchResult {
   feedUrl: string;
@@ -16,6 +23,7 @@ interface SearchResult {
 }
 
 export function AddFeedForm() {
+  const [activeTab, setActiveTab] = useState<FeedTab>("rss");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -26,7 +34,7 @@ export function AddFeedForm() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const search = useCallback(async (q: string) => {
+  const search = useCallback(async (q: string, type: FeedTab) => {
     if (q.trim().length < 2) {
       setResults([]);
       setSearching(false);
@@ -34,7 +42,7 @@ export function AddFeedForm() {
     }
     setSearching(true);
     try {
-      const res = await fetch(`/api/feeds/search?q=${encodeURIComponent(q.trim())}`);
+      const res = await fetch(`/api/feeds/search?q=${encodeURIComponent(q.trim())}&type=${type}`);
       const data = await res.json();
       setResults(data.results ?? []);
       setShowResults(true);
@@ -51,11 +59,10 @@ export function AddFeedForm() {
       setResults([]);
       return;
     }
-    debounceRef.current = setTimeout(() => search(query), 400);
+    debounceRef.current = setTimeout(() => search(query, activeTab), 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, search]);
+  }, [query, activeTab, search]);
 
-  // Close results on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -73,7 +80,7 @@ export function AddFeedForm() {
       const res = await fetch("/api/feeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: feedUrl }),
+        body: JSON.stringify({ url: feedUrl, type: activeTab }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -99,8 +106,35 @@ export function AddFeedForm() {
     setError(null);
   }
 
+  function handleTabChange(tab: FeedTab) {
+    setActiveTab(tab);
+    setResults([]);
+    setShowResults(false);
+  }
+
+  const currentTab = TABS.find((t) => t.key === activeTab)!;
+
   return (
     <div ref={containerRef} className="px-3 pb-3 relative">
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 2, marginBottom: 6 }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => handleTabChange(tab.key)}
+            className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors",
+              activeTab === tab.key
+                ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search input */}
       <div className="relative">
         <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 pointer-events-none" />
@@ -109,7 +143,7 @@ export function AddFeedForm() {
           value={query}
           onChange={(e) => { setQuery(e.target.value); setError(null); setShowResults(true); }}
           onFocus={() => { if (results.length > 0) setShowResults(true); }}
-          placeholder="Buscar feeds..."
+          placeholder={currentTab.placeholder}
           className={cn(
             "w-full text-sm pl-8 pr-8 py-1.5 rounded-md border",
             "bg-white dark:bg-neutral-900",
@@ -181,9 +215,9 @@ export function AddFeedForm() {
                     {r.description}
                   </p>
                 )}
-                {r.website && (
-                  <p className="text-xs text-neutral-400 dark:text-neutral-600 truncate mt-0.5">
-                    {r.website.replace(/^https?:\/\//, "")}
+                {r.subscribers > 0 && (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-0.5">
+                    {r.subscribers.toLocaleString()} suscriptores
                   </p>
                 )}
               </div>

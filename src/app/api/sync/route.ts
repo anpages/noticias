@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
-import { fetchFeed } from "@/lib/feed-fetcher";
+import { fetchFeedByType } from "@/lib/feed-fetcher";
+import type { FeedType } from "@/lib/feed-fetcher";
 import { insertArticles, updateFeedMeta } from "@/lib/queries";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -11,7 +12,7 @@ export async function POST() {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userFeeds = await db
-    .select({ id: feeds.id, url: feeds.url })
+    .select({ id: feeds.id, url: feeds.url, type: feeds.type, lastFetched: feeds.lastFetched })
     .from(feeds)
     .where(eq(feeds.userId, session.user.id));
 
@@ -19,14 +20,14 @@ export async function POST() {
 
   const results = await Promise.allSettled(
     userFeeds.map(async (feed) => {
-      const data = await fetchFeed(feed.url);
+      const data = await fetchFeedByType(feed.url, feed.type as FeedType);
       await updateFeedMeta(feed.id, {
         title: data.title,
         description: data.description,
         siteUrl: data.siteUrl,
         favicon: data.favicon,
       });
-      const count = await insertArticles(feed.id, data.items);
+      const count = await insertArticles(feed.id, data.items, feed.lastFetched);
       return count;
     })
   );

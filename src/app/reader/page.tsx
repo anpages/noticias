@@ -8,8 +8,12 @@ import { ArticleView } from "@/components/reader/article-view";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 
 export default function ReaderPage() {
-  const [activeFeedId, setActiveFeedId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<string | null>(null);
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
+
+  // Parse selection: "type:rss" = category filter, UUID = specific feed, null = all rss
+  const feedType = selection?.startsWith("type:") ? selection.slice(5) : (selection ? null : "rss");
+  const feedId = selection?.startsWith("type:") ? null : selection;
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -50,8 +54,8 @@ export default function ReaderPage() {
             height: "100%",
           }}>
             <Sidebar
-              activeFeedId={activeFeedId}
-              onFeedSelect={setActiveFeedId}
+              selection={selection}
+              onSelect={setSelection}
               onCollapse={() => { setSidebarVisible(false); localStorage.setItem("sidebar", "hidden"); }}
             />
           </div>
@@ -60,8 +64,8 @@ export default function ReaderPage() {
         {/* Mobile drawer — only rendered when mobile */}
         {!isDesktop && (
           <Sidebar
-            activeFeedId={activeFeedId}
-            onFeedSelect={setActiveFeedId}
+            selection={selection}
+            onSelect={setSelection}
             isDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
@@ -82,7 +86,8 @@ export default function ReaderPage() {
               />
             ) : (
               <ArticleList
-                feedId={activeFeedId}
+                feedId={feedId}
+                feedType={feedType}
                 mainRef={mainRef}
                 onArticleClick={(id) => {
                   setActiveArticleId(id);

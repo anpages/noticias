@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Rss } from "lucide-react";
+import { Trash2, Rss, Gamepad2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
+function FallbackIcon({ type }: { type: string }) {
+  if (type === "steam") return <Gamepad2 size={12} className="text-neutral-400" />;
+  return <Rss size={12} className="text-neutral-400" />;
+}
+
 interface FeedItemProps {
   id: string;
+  type: string;
   title: string | null;
   url: string;
   favicon: string | null;
@@ -16,7 +22,7 @@ interface FeedItemProps {
   onClick: () => void;
 }
 
-export function FeedItem({ id, title, url, favicon, unreadCount: rawCount, isActive, onClick }: FeedItemProps) {
+export function FeedItem({ id, type, title, url, favicon, unreadCount: rawCount, isActive, onClick }: FeedItemProps) {
   const unreadCount = Number(rawCount) || 0;
   const [imgError, setImgError] = useState(false);
   const queryClient = useQueryClient();
@@ -56,7 +62,7 @@ export function FeedItem({ id, title, url, favicon, unreadCount: rawCount, isAct
             onError={() => setImgError(true)}
           />
         ) : (
-          <Rss size={12} className="text-neutral-400" />
+          <FallbackIcon type={type} />
         )}
       </span>
       <span className="flex-1 truncate">{displayTitle}</span>

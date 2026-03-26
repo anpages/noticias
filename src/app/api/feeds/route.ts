@@ -1,13 +1,15 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
-import { fetchFeed } from "@/lib/feed-fetcher";
-import { getUserFeeds, insertArticles, updateFeedMeta } from "@/lib/queries";
+import { fetchFeedByType } from "@/lib/feed-fetcher";
+import type { FeedType } from "@/lib/feed-fetcher";
+import { getUserFeeds, insertArticles } from "@/lib/queries";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const addFeedSchema = z.object({
   url: z.string().url("URL inválida"),
+  type: z.enum(["rss", "steam"]).default("rss"),
 });
 
 export async function GET() {
@@ -29,21 +31,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: issues[0]?.message ?? "URL inválida" }, { status: 400 });
   }
 
-  const { url } = parsed.data;
+  const { url, type } = parsed.data;
 
-  // Fetch feed metadata first to validate it's a real feed
   let feedData;
   try {
-    feedData = await fetchFeed(url);
+    feedData = await fetchFeedByType(url, type as FeedType);
   } catch {
     return NextResponse.json({ error: "No se pudo leer el feed. Verifica la URL." }, { status: 400 });
   }
 
-  // Insert feed
   const [newFeed] = await db
     .insert(feeds)
     .values({
       userId: session.user.id,
+      type,
       url,
       title: feedData.title,
       description: feedData.description,
@@ -58,8 +59,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ya tienes este feed añadido." }, { status: 409 });
   }
 
-  // Insert initial articles
-  await insertArticles(newFeed.id, feedData.items);
+  const latest = feedData.items
+    .filter((i) => i.publishedAt)
+    .sort((a, b) => (b.publishedAt!.getTime() - a.publishedAt!.getTime()))
+    .slice(0, 20);
+  await insertArticles(newFeed.id, latest);
 
   return NextResponse.json(newFeed, { status: 201 });
 }

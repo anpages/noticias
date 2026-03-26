@@ -10,16 +10,19 @@ import { CheckCheck, Inbox, Loader2, RefreshCw } from "lucide-react";
 
 interface ArticleListProps {
   feedId: string | null;
+  feedType?: string | null;
   mainRef: React.RefObject<HTMLElement | null>;
   onArticleClick: (id: string) => void;
 }
 
-export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProps) {
+export function ArticleList({ feedId, feedType, mainRef, onArticleClick }: ArticleListProps) {
   useSync();
 
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
   const {
     data,
@@ -29,53 +32,66 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
     isLoading,
     isError,
     refetch,
-  } = useArticles(feedId);
+  } = useArticles(feedId, feedType);
 
-  // Derive articles early so callbacks can reference it
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
-
-  const handleRead = useCallback(
-    (ids: string[]) => {
-      setReadIds((prev) => new Set([...prev, ...ids]));
+  // Scroll-based read: visual + delete from DB
+  const handleScrollRead = useCallback((ids: string[]) => {
+    setReadIds((prev) => new Set([...prev, ...ids]));
+    fetch("/api/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ articleIds: ids }),
+    }).then(() => {
       queryClient.invalidateQueries({ queryKey: ["feeds"] });
-      fetch("/api/read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ articleIds: ids }),
-      }).catch(() => {});
-    },
-    [queryClient]
-  );
+    }).catch(() => {});
+  }, [queryClient]);
 
-  const syncAndRefresh = useCallback(() => {
+  // Delete articles from DB and refresh
+  const deleteAndRefresh = useCallback(async (ids: string[]) => {
+    await fetch("/api/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ articleIds: ids }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ["articles"] });
+    queryClient.invalidateQueries({ queryKey: ["feeds"] });
+  }, [queryClient]);
+
+  // Sync feeds for new articles
+  const syncFeeds = useCallback(() => {
     return fetch("/api/sync", { method: "POST" })
       .then(() => {
-        queryClient.invalidateQueries({ queryKey: ["articles", feedId] });
+        queryClient.invalidateQueries({ queryKey: ["articles"] });
         queryClient.invalidateQueries({ queryKey: ["feeds"] });
       })
       .catch(() => {});
-  }, [queryClient, feedId]);
+  }, [queryClient]);
 
+  // Individual mark as read: delete from DB
   const handleMarkRead = useCallback(
-    (id: string) => {
-      handleRead([id]);
-      syncAndRefresh();
+    async (id: string) => {
+      setReadIds((prev) => new Set([...prev, id]));
+      await deleteAndRefresh([id]);
     },
-    [handleRead, syncAndRefresh]
+    [deleteAndRefresh]
   );
 
+  // Mark all as read: delete all from DB + sync new
   const handleMarkAllRead = useCallback(async () => {
-    const unreadIds = allArticles.filter((a) => !readIds.has(a.id)).map((a) => a.id);
-    if (unreadIds.length === 0) return;
+    const allIds = allArticles.map((a) => a.id);
+    if (allIds.length === 0) return;
     setMarkingAll(true);
-    handleRead(unreadIds);
-    await syncAndRefresh();
+    setReadIds(new Set(allIds));
+    await deleteAndRefresh(allIds);
+    await syncFeeds();
     setMarkingAll(false);
+    setReadIds(new Set());
     if (mainRef.current) mainRef.current.scrollTop = 0;
-  }, [allArticles, readIds, handleRead, syncAndRefresh, mainRef]);
+  }, [allArticles, deleteAndRefresh, syncFeeds, mainRef]);
 
-  const { observe, unobserve } = useReadObserver(handleRead, mainRef);
+  const { observe, unobserve } = useReadObserver(handleScrollRead, mainRef);
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -102,8 +118,7 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainRef]);
+  }, [mainRef, allArticles.length]);
 
   if (isLoading) {
     return (
@@ -136,8 +151,38 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
         </div>
         <p className="font-medium text-neutral-700 dark:text-neutral-300">Todo al día</p>
         <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
-          Sin artículos nuevos en los últimos 3 días
+          No hay artículos pendientes
         </p>
+        <button
+          onClick={async () => {
+            setRefreshing(true);
+            setRefreshMsg(null);
+            localStorage.removeItem("rss-last-sync");
+            try {
+              const res = await fetch("/api/sync", { method: "POST" });
+              const data = await res.json();
+              queryClient.invalidateQueries({ queryKey: ["feeds"] });
+              await refetch();
+              if (data.newArticles === 0) {
+                setRefreshMsg("No hay artículos nuevos por ahora");
+              }
+            } catch {
+              setRefreshMsg("Error al sincronizar");
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+          disabled={refreshing}
+          className="flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-sm"
+        >
+          {refreshing
+            ? <><Loader2 size={14} className="animate-spin" /> Buscando...</>
+            : <><RefreshCw size={14} /> Buscar nuevos artículos</>
+          }
+        </button>
+        {refreshMsg && (
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-2">{refreshMsg}</p>
+        )}
       </div>
     );
   }
@@ -158,7 +203,6 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
         />
       ))}
 
-      {/* Infinite scroll sentinel */}
       <div ref={sentinelRef} style={{ height: 1 }} />
 
       {isFetchingNextPage && (
@@ -167,8 +211,8 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
         </div>
       )}
 
-      {/* Mark all read button — always visible when there are unread articles */}
-      {hasUnread && (
+      {/* Mark all read — only when no more pages to load */}
+      {!hasNextPage && !isFetchingNextPage && allArticles.length > 0 && (
         <div className="flex flex-col items-center gap-2 py-6">
           <button
             onClick={handleMarkAllRead}
@@ -183,11 +227,6 @@ export function ArticleList({ feedId, mainRef, onArticleClick }: ArticleListProp
         </div>
       )}
 
-      {!hasUnread && allArticles.length > 0 && (
-        <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 py-4">
-          {allArticles.length} artículo{allArticles.length !== 1 ? "s" : ""}
-        </p>
-      )}
     </div>
   );
 }

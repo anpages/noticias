@@ -18,13 +18,14 @@ interface ArticlesResponse {
   nextCursor: string | null;
 }
 
-export function useArticles(feedId: string | null) {
+export function useArticles(feedId: string | null, feedType?: string | null) {
   return useInfiniteQuery<ArticlesResponse>({
-    queryKey: ["articles", feedId],
+    queryKey: ["articles", feedId, feedType],
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
       if (pageParam) params.set("cursor", pageParam as string);
       if (feedId) params.set("feedId", feedId);
+      if (feedType) params.set("feedType", feedType);
       params.set("limit", "30");
 
       const res = await fetch(`/api/articles?${params}`);

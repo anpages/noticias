@@ -1,14 +1,13 @@
 import { db } from "@/db";
-import { articles, feeds, readStatus } from "@/db/schema";
-import { and, asc, eq, gt, gte, inArray, notExists, sql } from "drizzle-orm";
+import { articles, feeds } from "@/db/schema";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import type { FeedItem } from "./feed-fetcher";
-
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 export async function getUserFeeds(userId: string) {
   const result = await db
     .select({
       id: feeds.id,
+      type: feeds.type,
       url: feeds.url,
       title: feeds.title,
       favicon: feeds.favicon,
@@ -17,12 +16,6 @@ export async function getUserFeeds(userId: string) {
       unreadCount: sql<number>`
         COUNT(DISTINCT ${articles.id}) FILTER (
           WHERE ${articles.id} IS NOT NULL
-          AND ${articles.publishedAt} >= NOW() - INTERVAL '3 days'
-          AND NOT EXISTS (
-            SELECT 1 FROM ${readStatus} rs
-            WHERE rs.article_id = ${articles.id}
-            AND rs.user_id = ${userId}
-          )
         )::int
       `.as("unread_count"),
     })
@@ -41,41 +34,30 @@ export async function getArticles(
     cursor?: string | null;
     limit?: number;
     feedId?: string | null;
+    feedType?: string | null;
   }
 ) {
-  const { cursor, limit = 30, feedId } = options;
+  const { cursor, limit = 30, feedId, feedType } = options;
 
   const userFeeds = await db
-    .select({ id: feeds.id })
+    .select({ id: feeds.id, type: feeds.type })
     .from(feeds)
     .where(eq(feeds.userId, userId));
 
   if (userFeeds.length === 0) return { articles: [], nextCursor: null };
 
-  const feedIds = feedId
-    ? userFeeds.filter((f) => f.id === feedId).map((f) => f.id)
-    : userFeeds.map((f) => f.id);
+  let filtered = userFeeds;
+  if (feedId) {
+    filtered = userFeeds.filter((f) => f.id === feedId);
+  } else if (feedType) {
+    filtered = userFeeds.filter((f) => f.type === feedType);
+  }
+  const feedIds = filtered.map((f) => f.id);
 
   if (feedIds.length === 0) return { articles: [], nextCursor: null };
 
-  const threeDaysAgo = new Date(Date.now() - THREE_DAYS_MS);
-
   const conditions = [
     inArray(articles.feedId, feedIds),
-    // Only last 3 days
-    gte(articles.publishedAt, threeDaysAgo),
-    // Exclude read articles
-    notExists(
-      db
-        .select({ one: sql`1` })
-        .from(readStatus)
-        .where(
-          and(
-            eq(readStatus.articleId, articles.id),
-            eq(readStatus.userId, userId)
-          )
-        )
-    ),
   ];
 
   if (cursor) {
@@ -132,10 +114,17 @@ export async function getArticleById(userId: string, articleId: string) {
   return row[0] ?? null;
 }
 
-export async function insertArticles(feedId: string, items: FeedItem[]) {
+export async function insertArticles(feedId: string, items: FeedItem[], lastFetched?: Date | null) {
   if (items.length === 0) return 0;
 
-  const values = items.map((item) => ({
+  // Only insert articles newer than lastFetched to avoid re-inserting old ones
+  const filtered = lastFetched
+    ? items.filter((item) => item.publishedAt && item.publishedAt > lastFetched)
+    : items;
+
+  if (filtered.length === 0) return 0;
+
+  const values = filtered.map((item) => ({
     feedId,
     guid: item.guid,
     title: item.title,
@@ -150,19 +139,31 @@ export async function insertArticles(feedId: string, items: FeedItem[]) {
   const result = await db
     .insert(articles)
     .values(values)
-    .onConflictDoUpdate({
-      target: [articles.feedId, articles.guid],
-      set: { imageUrl: sql`excluded.image_url`, content: sql`COALESCE(excluded.content, ${articles.content})` },
-    })
+    .onConflictDoNothing()
     .returning({ id: articles.id });
 
   return result.length;
 }
 
-export async function upsertReadStatus(userId: string, articleIds: string[]) {
+export async function deleteArticles(userId: string, articleIds: string[]) {
   if (articleIds.length === 0) return;
-  const values = articleIds.map((articleId) => ({ userId, articleId }));
-  await db.insert(readStatus).values(values).onConflictDoNothing();
+  // Only delete articles that belong to user's feeds
+  const userFeedIds = await db
+    .select({ id: feeds.id })
+    .from(feeds)
+    .where(eq(feeds.userId, userId));
+  const feedIdSet = new Set(userFeedIds.map((f) => f.id));
+
+  // Get articles that belong to user's feeds
+  const toDelete = await db
+    .select({ id: articles.id, feedId: articles.feedId })
+    .from(articles)
+    .where(inArray(articles.id, articleIds));
+
+  const validIds = toDelete.filter((a) => feedIdSet.has(a.feedId)).map((a) => a.id);
+  if (validIds.length === 0) return;
+
+  await db.delete(articles).where(inArray(articles.id, validIds));
 }
 
 export async function updateFeedMeta(

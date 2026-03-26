@@ -9,9 +9,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cursor = searchParams.get("cursor");
   const feedId = searchParams.get("feedId");
+  const feedType = searchParams.get("feedType");
   const limit = Math.min(parseInt(searchParams.get("limit") || "30"), 100);
 
-  const result = await getArticles(session.user.id, { cursor, feedId, limit });
+  const result = await getArticles(session.user.id, { cursor, feedId, feedType, limit });
   return NextResponse.json(result, {
     headers: { "Cache-Control": "no-store" },
   });

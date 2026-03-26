@@ -73,6 +73,7 @@ export const feeds = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull().default("rss"),
     url: text("url").notNull(),
     title: text("title"),
     description: text("description"),

@@ -8,11 +8,12 @@ import Image from "next/image";
 
 interface ArticleCardProps {
   article: Article;
+  isRemoving: boolean;
   onObserve: (el: HTMLElement | null) => void;
   onUnobserve: (el: HTMLElement | null) => void;
 }
 
-export function ArticleCard({ article, onObserve, onUnobserve }: ArticleCardProps) {
+export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: ArticleCardProps) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function ArticleCard({ article, onObserve, onUnobserve }: ArticleCardProp
     <article
       ref={ref}
       data-article-id={article.id}
-      className="group bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-md dark:hover:shadow-black/30 transition-all duration-200"
+      className={`group bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-md dark:hover:shadow-black/30 transition-shadow duration-200${isRemoving ? " article-removing" : ""}`}
     >
       {/* Image */}
       {article.imageUrl && (

@@ -1,17 +1,28 @@
 "use client";
 
+import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useArticles } from "@/hooks/use-articles";
 import { useReadObserver } from "@/hooks/use-read-observer";
 import { useSync } from "@/hooks/use-sync";
 import { ArticleCard } from "./article-card";
 import { Loader2, RefreshCw, Inbox } from "lucide-react";
 
+const ANIMATION_DURATION = 360;
+
 interface ArticleListProps {
   feedId: string | null;
 }
 
+type ArticlesCache = {
+  pages: { articles: { id: string }[]; nextCursor: string | null }[];
+};
+
 export function ArticleList({ feedId }: ArticleListProps) {
   useSync();
+
+  const queryClient = useQueryClient();
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   const {
     data,
@@ -23,7 +34,46 @@ export function ArticleList({ feedId }: ArticleListProps) {
     refetch,
   } = useArticles(feedId);
 
-  const { observe, unobserve } = useReadObserver(feedId);
+  const handleRead = useCallback(
+    (ids: string[]) => {
+      // Mark as animating out
+      setRemovingIds((prev) => new Set([...prev, ...ids]));
+
+      // After animation, remove from cache and call API
+      setTimeout(() => {
+        setRemovingIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+
+        queryClient.setQueriesData(
+          { queryKey: ["articles", feedId] },
+          (old: ArticlesCache | undefined) => {
+            if (!old) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                articles: page.articles.filter((a) => !ids.includes(a.id)),
+              })),
+            };
+          }
+        );
+
+        queryClient.invalidateQueries({ queryKey: ["feeds"] });
+
+        fetch("/api/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ articleIds: ids }),
+        }).catch(() => {});
+      }, ANIMATION_DURATION);
+    },
+    [queryClient, feedId]
+  );
+
+  const { observe, unobserve } = useReadObserver(handleRead);
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
@@ -80,6 +130,7 @@ export function ArticleList({ feedId }: ArticleListProps) {
         <ArticleCard
           key={article.id}
           article={article}
+          isRemoving={removingIds.has(article.id)}
           onObserve={observe}
           onUnobserve={unobserve}
         />

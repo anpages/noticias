@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: dark mode via .dark class on <html> */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f9fafb;
   --foreground: #111827;
@@ -15,4 +18,18 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Article exit animation */
+@keyframes article-out {
+  0%   { opacity: 1; transform: scaleY(1); max-height: 600px; margin-bottom: 0.75rem; }
+  40%  { opacity: 0; transform: scaleY(0.97); }
+  100% { opacity: 0; transform: scaleY(0.97); max-height: 0; margin-bottom: 0; }
+}
+
+.article-removing {
+  animation: article-out 350ms ease-in forwards;
+  overflow: hidden;
+  transform-origin: top;
+  pointer-events: none;
 }

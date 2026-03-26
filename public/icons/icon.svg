@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#3b82f6"/>
+  <path d="M128 160 C128 160 128 352 128 352" stroke="white" stroke-width="0" fill="none"/>
+  <!-- RSS icon centered -->
+  <circle cx="176" cy="336" r="36" fill="white"/>
+  <path d="M176 272 C248 272 304 328 304 400" stroke="white" stroke-width="40" fill="none" stroke-linecap="round"/>
+  <path d="M176 192 C296 192 384 280 384 400" stroke="white" stroke-width="40" fill="none" stroke-linecap="round"/>
+</svg>

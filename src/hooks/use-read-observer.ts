@@ -1,53 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 
 const FLUSH_INTERVAL = 2000;
 
-type ArticlesCache = {
-  pages: {
-    articles: { id: string }[];
-    nextCursor: string | null;
-  }[];
-};
-
-export function useReadObserver(feedId: string | null) {
+export function useReadObserver(onRead: (ids: string[]) => void) {
   const pendingIds = useRef<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const queryClient = useQueryClient();
+  const onReadRef = useRef(onRead);
+  onReadRef.current = onRead;
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(() => {
     const ids = Array.from(pendingIds.current);
     if (ids.length === 0) return;
     pendingIds.current.clear();
-
-    // Optimistic: remove articles from cache
-    queryClient.setQueriesData(
-      { queryKey: ["articles", feedId] },
-      (old: ArticlesCache | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            articles: page.articles.filter((a) => !ids.includes(a.id)),
-          })),
-        };
-      }
-    );
-
-    // Invalidate feeds to update unread counts
-    queryClient.invalidateQueries({ queryKey: ["feeds"] });
-
-    // Persist to server
-    await fetch("/api/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ articleIds: ids }),
-    }).catch(() => {});
-  }, [queryClient, feedId]);
+    onReadRef.current(ids);
+  }, []);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -58,7 +27,6 @@ export function useReadObserver(feedId: string | null) {
             if (id) {
               pendingIds.current.add(id);
               observerRef.current?.unobserve(entry.target);
-
               if (timerRef.current) clearTimeout(timerRef.current);
               timerRef.current = setTimeout(flush, FLUSH_INTERVAL);
             }

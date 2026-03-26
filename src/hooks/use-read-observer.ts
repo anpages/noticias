@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef } from "react";
 
 const FLUSH_INTERVAL = 1500;
-// Article is "read" when its bottom edge passes this point from the top of viewport
 const READ_THRESHOLD_PX = 120;
 
-export function useReadObserver(onRead: (ids: string[]) => void) {
+export function useReadObserver(
+  onRead: (ids: string[]) => void,
+  scrollContainerRef: React.RefObject<HTMLElement | null>
+) {
   const pendingIds = useRef<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onReadRef = useRef(onRead);
@@ -20,17 +22,20 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
   }, []);
 
   useEffect(() => {
-    const container = document.querySelector("main") ?? window;
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
     const handleScroll = () => {
-      // Find all article elements that have been scrolled past
+      const containerRect = container.getBoundingClientRect();
+
       document.querySelectorAll<HTMLElement>("[data-article-id]").forEach((el) => {
         const id = el.dataset.articleId;
         if (!id || pendingIds.current.has(id)) return;
 
         const rect = el.getBoundingClientRect();
-        // Mark as read when the bottom of the article goes above READ_THRESHOLD_PX from top
-        if (rect.bottom < READ_THRESHOLD_PX) {
+        // Mark as read when the bottom of the article scrolls past READ_THRESHOLD_PX
+        // below the top of the scroll container
+        if (rect.bottom < containerRect.top + READ_THRESHOLD_PX) {
           pendingIds.current.add(id);
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(flush, FLUSH_INTERVAL);
@@ -44,9 +49,8 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
       if (timerRef.current) clearTimeout(timerRef.current);
       flush();
     };
-  }, [flush]);
+  }, [flush, scrollContainerRef]);
 
-  // No-op — scroll handler finds articles by DOM query, no registration needed
   const observe = useCallback((_el: HTMLElement | null) => {}, []);
   const unobserve = useCallback((_el: HTMLElement | null) => {}, []);
 

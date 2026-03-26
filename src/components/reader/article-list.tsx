@@ -10,9 +10,10 @@ import { Loader2, RefreshCw, Inbox } from "lucide-react";
 
 interface ArticleListProps {
   feedId: string | null;
+  mainRef: React.RefObject<HTMLElement | null>;
 }
 
-export function ArticleList({ feedId }: ArticleListProps) {
+export function ArticleList({ feedId, mainRef }: ArticleListProps) {
   useSync();
 
   const queryClient = useQueryClient();
@@ -46,7 +47,7 @@ export function ArticleList({ feedId }: ArticleListProps) {
     [queryClient]
   );
 
-  const { observe, unobserve } = useReadObserver(handleRead);
+  const { observe, unobserve } = useReadObserver(handleRead, mainRef);
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 

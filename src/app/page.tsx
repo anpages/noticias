@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <div className="text-center px-6">
+      <div className="text-center px-6 w-full max-w-sm mx-auto">
         <div className="flex justify-center mb-6">
           <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-500 text-white shadow-lg">
             <Rss size={32} />

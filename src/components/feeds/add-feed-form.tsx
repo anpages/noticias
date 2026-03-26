@@ -44,6 +44,10 @@ export function AddFeedForm() {
       <div className="flex gap-1.5">
         <input
           type="url"
+          inputMode="url"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={url}
           onChange={(e) => { setUrl(e.target.value); setError(null); }}
           placeholder="https://feed.example.com/rss"

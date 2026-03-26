@@ -37,7 +37,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve }: Article
       {/* Image */}
       {article.imageUrl && !isRead && (
         <a href={article.url ?? undefined} target="_blank" rel="noopener noreferrer">
-          <div className="relative w-full h-48 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+          <div className="relative w-full h-36 sm:h-48 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
             <Image
               src={article.imageUrl}
               alt={article.title ?? ""}
@@ -53,7 +53,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve }: Article
         </a>
       )}
 
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {/* Feed meta */}
         <div className="flex items-center gap-1.5 mb-2">
           {article.feedFavicon ? (

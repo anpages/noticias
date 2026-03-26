@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ExternalLink, Rss } from "lucide-react";
-import { cn, formatRelativeDate } from "@/lib/utils";
+import { formatRelativeDate } from "@/lib/utils";
 import type { Article } from "@/hooks/use-articles";
 import Image from "next/image";
 
@@ -17,23 +17,35 @@ export function ArticleCard({ article, onObserve, onUnobserve }: ArticleCardProp
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || article.isRead) return;
+    if (!el) return;
     onObserve(el);
     return () => onUnobserve(el);
-  }, [article.isRead, onObserve, onUnobserve]);
+  }, [onObserve, onUnobserve]);
 
   return (
     <article
       ref={ref}
       data-article-id={article.id}
-      className={cn(
-        "group relative bg-white dark:bg-neutral-900 rounded-xl border transition-all duration-200",
-        "hover:shadow-md dark:hover:shadow-black/30",
-        article.isRead
-          ? "border-neutral-100 dark:border-neutral-800 opacity-60"
-          : "border-neutral-200 dark:border-neutral-700"
-      )}
+      className="group bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-md dark:hover:shadow-black/30 transition-all duration-200"
     >
+      {/* Image */}
+      {article.imageUrl && (
+        <a href={article.url ?? undefined} target="_blank" rel="noopener noreferrer">
+          <div className="relative w-full h-48 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+            <Image
+              src={article.imageUrl}
+              alt={article.title ?? ""}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              sizes="(max-width: 672px) 100vw, 672px"
+              onError={(e) => {
+                (e.target as HTMLImageElement).closest("a")?.remove();
+              }}
+            />
+          </div>
+        </a>
+      )}
+
       <div className="p-4">
         {/* Feed meta */}
         <div className="flex items-center gap-1.5 mb-2">
@@ -61,12 +73,7 @@ export function ArticleCard({ article, onObserve, onUnobserve }: ArticleCardProp
         {/* Title */}
         <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug mb-1.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
           {article.url ? (
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
+            <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
               {article.title || "(Sin título)"}
             </a>
           ) : (

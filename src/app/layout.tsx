@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning className="h-full">
-      <body className="h-full">
+      <body className="h-full" suppressHydrationWarning>
         <ThemeProvider>
           <SessionProvider>
             <QueryProvider>{children}</QueryProvider>

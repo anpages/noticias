@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { articles, feeds, readStatus } from "@/db/schema";
-import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, notExists, sql } from "drizzle-orm";
 import type { FeedItem } from "./feed-fetcher";
 
 export async function getUserFeeds(userId: string) {
@@ -55,7 +55,27 @@ export async function getArticles(
 
   if (feedIds.length === 0) return { articles: [], nextCursor: null };
 
-  const conditions = [inArray(articles.feedId, feedIds)];
+  // Subquery to check if article is read
+  const readSubquery = db
+    .select({ articleId: readStatus.articleId })
+    .from(readStatus)
+    .where(eq(readStatus.userId, userId));
+
+  const conditions = [
+    inArray(articles.feedId, feedIds),
+    notExists(
+      db
+        .select({ one: sql`1` })
+        .from(readStatus)
+        .where(
+          and(
+            eq(readStatus.articleId, articles.id),
+            eq(readStatus.userId, userId)
+          )
+        )
+    ),
+  ];
+
   if (cursor) {
     conditions.push(gt(articles.publishedAt, new Date(cursor)));
   }
@@ -68,16 +88,10 @@ export async function getArticles(
       url: articles.url,
       summary: articles.summary,
       author: articles.author,
+      imageUrl: articles.imageUrl,
       publishedAt: articles.publishedAt,
       feedTitle: feeds.title,
       feedFavicon: feeds.favicon,
-      isRead: sql<boolean>`
-        EXISTS (
-          SELECT 1 FROM ${readStatus} rs
-          WHERE rs.article_id = ${articles.id}
-          AND rs.user_id = ${userId}
-        )
-      `.as("is_read"),
     })
     .from(articles)
     .innerJoin(feeds, eq(feeds.id, articles.feedId))
@@ -102,6 +116,7 @@ export async function insertArticles(feedId: string, items: FeedItem[]) {
     url: item.url,
     summary: item.summary,
     author: item.author,
+    imageUrl: item.imageUrl,
     publishedAt: item.publishedAt,
   }));
 

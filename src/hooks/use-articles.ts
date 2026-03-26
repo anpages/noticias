@@ -7,10 +7,10 @@ interface Article {
   url: string | null;
   summary: string | null;
   author: string | null;
+  imageUrl: string | null;
   publishedAt: string | null;
   feedTitle: string | null;
   feedFavicon: string | null;
-  isRead: boolean;
 }
 
 interface ArticlesResponse {

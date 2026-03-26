@@ -98,6 +98,7 @@ export const articles = pgTable(
     url: text("url"),
     summary: text("summary"),
     author: text("author"),
+    imageUrl: text("image_url"),
     publishedAt: timestamp("published_at"),
     fetchedAt: timestamp("fetched_at").defaultNow(),
   },

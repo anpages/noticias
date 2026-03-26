@@ -5,6 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const FLUSH_INTERVAL = 2000;
 
+type ArticlesCache = {
+  pages: {
+    articles: { id: string }[];
+    nextCursor: string | null;
+  }[];
+};
+
 export function useReadObserver(feedId: string | null) {
   const pendingIds = useRef<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -16,24 +23,25 @@ export function useReadObserver(feedId: string | null) {
     if (ids.length === 0) return;
     pendingIds.current.clear();
 
-    // Optimistic update
+    // Optimistic: remove articles from cache
     queryClient.setQueriesData(
       { queryKey: ["articles", feedId] },
-      (old: { pages: { articles: { id: string; isRead: boolean }[]; nextCursor: string | null }[] } | undefined) => {
+      (old: ArticlesCache | undefined) => {
         if (!old) return old;
         return {
           ...old,
           pages: old.pages.map((page) => ({
             ...page,
-            articles: page.articles.map((a) =>
-              ids.includes(a.id) ? { ...a, isRead: true } : a
-            ),
+            articles: page.articles.filter((a) => !ids.includes(a.id)),
           })),
         };
       }
     );
 
-    // Send to server
+    // Invalidate feeds to update unread counts
+    queryClient.invalidateQueries({ queryKey: ["feeds"] });
+
+    // Persist to server
     await fetch("/api/read", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

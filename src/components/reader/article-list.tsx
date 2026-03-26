@@ -8,21 +8,15 @@ import { useSync } from "@/hooks/use-sync";
 import { ArticleCard } from "./article-card";
 import { Loader2, RefreshCw, Inbox } from "lucide-react";
 
-const ANIMATION_DURATION = 360;
-
 interface ArticleListProps {
   feedId: string | null;
 }
-
-type ArticlesCache = {
-  pages: { articles: { id: string }[]; nextCursor: string | null }[];
-};
 
 export function ArticleList({ feedId }: ArticleListProps) {
   useSync();
 
   const queryClient = useQueryClient();
-  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   const {
     data,
@@ -36,45 +30,23 @@ export function ArticleList({ feedId }: ArticleListProps) {
 
   const handleRead = useCallback(
     (ids: string[]) => {
-      // Mark as animating out
-      setRemovingIds((prev) => new Set([...prev, ...ids]));
+      // Mark as read locally
+      setReadIds((prev) => new Set([...prev, ...ids]));
 
-      // After animation, remove from cache and call API
-      setTimeout(() => {
-        setRemovingIds((prev) => {
-          const next = new Set(prev);
-          ids.forEach((id) => next.delete(id));
-          return next;
-        });
+      // Update sidebar unread counts
+      queryClient.invalidateQueries({ queryKey: ["feeds"] });
 
-        queryClient.setQueriesData(
-          { queryKey: ["articles", feedId] },
-          (old: ArticlesCache | undefined) => {
-            if (!old) return old;
-            return {
-              ...old,
-              pages: old.pages.map((page) => ({
-                ...page,
-                articles: page.articles.filter((a) => !ids.includes(a.id)),
-              })),
-            };
-          }
-        );
-
-        queryClient.invalidateQueries({ queryKey: ["feeds"] });
-
-        fetch("/api/read", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ articleIds: ids }),
-        }).catch(() => {});
-      }, ANIMATION_DURATION);
+      // Persist to server
+      fetch("/api/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleIds: ids }),
+      }).catch(() => {});
     },
-    [queryClient, feedId]
+    [queryClient]
   );
 
   const { observe, unobserve } = useReadObserver(handleRead);
-  // observe/unobserve identity changes when user first scrolls — cards re-register automatically
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
@@ -117,9 +89,9 @@ export function ArticleList({ feedId }: ArticleListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <Inbox size={40} className="text-neutral-300 dark:text-neutral-600 mb-3" />
-        <p className="text-neutral-500 dark:text-neutral-400 font-medium">No hay artículos</p>
+        <p className="text-neutral-500 dark:text-neutral-400 font-medium">Todo al día</p>
         <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
-          Añade fuentes RSS en el panel izquierdo
+          No hay artículos nuevos en los últimos 3 días
         </p>
       </div>
     );
@@ -131,7 +103,7 @@ export function ArticleList({ feedId }: ArticleListProps) {
         <ArticleCard
           key={article.id}
           article={article}
-          isRemoving={removingIds.has(article.id)}
+          isRead={readIds.has(article.id)}
           onObserve={observe}
           onUnobserve={unobserve}
         />

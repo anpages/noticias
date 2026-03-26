@@ -20,16 +20,3 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Article exit animation */
-@keyframes article-out {
-  0%   { opacity: 1; transform: scaleY(1); max-height: 600px; margin-bottom: 0.75rem; }
-  40%  { opacity: 0; transform: scaleY(0.97); }
-  100% { opacity: 0; transform: scaleY(0.97); max-height: 0; margin-bottom: 0; }
-}
-
-.article-removing {
-  animation: article-out 350ms ease-in forwards;
-  overflow: hidden;
-  transform-origin: top;
-  pointer-events: none;
-}

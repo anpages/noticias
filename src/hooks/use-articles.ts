@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
-interface Article {
+export interface Article {
   id: string;
   feedId: string;
   title: string | null;
@@ -17,8 +17,6 @@ interface ArticlesResponse {
   articles: Article[];
   nextCursor: string | null;
 }
-
-export type { Article };
 
 export function useArticles(feedId: string | null) {
   return useInfiniteQuery<ArticlesResponse>({

@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-const FLUSH_INTERVAL = 2000;
+const FLUSH_INTERVAL = 1500;
+// Article is "read" when its bottom edge passes this point from the top of viewport
+const READ_THRESHOLD_PX = 120;
 
 export function useReadObserver(onRead: (ids: string[]) => void) {
   const pendingIds = useRef<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const onReadRef = useRef(onRead);
-  const hasScrolledRef = useRef(false); // ref, not state — visible in observer callback instantly
-
   onReadRef.current = onRead;
 
   const flush = useCallback(() => {
@@ -21,45 +20,35 @@ export function useReadObserver(onRead: (ids: string[]) => void) {
   }, []);
 
   useEffect(() => {
-    // Track scroll with a ref so the observer callback sees it without recreating
-    const onScroll = () => { hasScrolledRef.current = true; };
-    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    const container = document.querySelector("main") ?? window;
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        // Ignore all intersections until the user has actually scrolled
-        if (!hasScrolledRef.current) return;
+    const handleScroll = () => {
+      // Find all article elements that have been scrolled past
+      document.querySelectorAll<HTMLElement>("[data-article-id]").forEach((el) => {
+        const id = el.dataset.articleId;
+        if (!id || pendingIds.current.has(id)) return;
 
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = (entry.target as HTMLElement).dataset.articleId;
-            if (id) {
-              pendingIds.current.add(id);
-              observerRef.current?.unobserve(entry.target);
-              if (timerRef.current) clearTimeout(timerRef.current);
-              timerRef.current = setTimeout(flush, FLUSH_INTERVAL);
-            }
-          }
-        });
-      },
-      { threshold: 0.8 }
-    );
+        const rect = el.getBoundingClientRect();
+        // Mark as read when the bottom of the article goes above READ_THRESHOLD_PX from top
+        if (rect.bottom < READ_THRESHOLD_PX) {
+          pendingIds.current.add(id);
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(flush, FLUSH_INTERVAL);
+        }
+      });
+    };
 
+    container.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      observerRef.current?.disconnect();
+      container.removeEventListener("scroll", handleScroll);
       if (timerRef.current) clearTimeout(timerRef.current);
       flush();
     };
   }, [flush]);
 
-  const observe = useCallback((el: HTMLElement | null) => {
-    if (el) observerRef.current?.observe(el);
-  }, []);
-
-  const unobserve = useCallback((el: HTMLElement | null) => {
-    if (el) observerRef.current?.unobserve(el);
-  }, []);
+  // No-op — scroll handler finds articles by DOM query, no registration needed
+  const observe = useCallback((_el: HTMLElement | null) => {}, []);
+  const unobserve = useCallback((_el: HTMLElement | null) => {}, []);
 
   return { observe, unobserve };
 }

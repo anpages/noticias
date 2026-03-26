@@ -2,18 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { ExternalLink, Rss } from "lucide-react";
-import { formatRelativeDate } from "@/lib/utils";
+import { cn, formatRelativeDate } from "@/lib/utils";
 import type { Article } from "@/hooks/use-articles";
 import Image from "next/image";
 
 interface ArticleCardProps {
   article: Article;
-  isRemoving: boolean;
+  isRead: boolean;
   onObserve: (el: HTMLElement | null) => void;
   onUnobserve: (el: HTMLElement | null) => void;
 }
 
-export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: ArticleCardProps) {
+export function ArticleCard({ article, isRead, onObserve, onUnobserve }: ArticleCardProps) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -27,10 +27,15 @@ export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: Art
     <article
       ref={ref}
       data-article-id={article.id}
-      className={`group bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden hover:shadow-md dark:hover:shadow-black/30 transition-shadow duration-200${isRemoving ? " article-removing" : ""}`}
+      className={cn(
+        "group bg-white dark:bg-neutral-900 rounded-xl border overflow-hidden transition-all duration-300",
+        isRead
+          ? "border-neutral-100 dark:border-neutral-800 opacity-50"
+          : "border-neutral-200 dark:border-neutral-700 hover:shadow-md dark:hover:shadow-black/30"
+      )}
     >
       {/* Image */}
-      {article.imageUrl && (
+      {article.imageUrl && !isRead && (
         <a href={article.url ?? undefined} target="_blank" rel="noopener noreferrer">
           <div className="relative w-full h-48 bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
             <Image
@@ -40,7 +45,8 @@ export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: Art
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               sizes="(max-width: 672px) 100vw, 672px"
               onError={(e) => {
-                (e.target as HTMLImageElement).closest("a")?.remove();
+                const wrapper = (e.target as HTMLImageElement).closest("a");
+                if (wrapper) wrapper.style.display = "none";
               }}
             />
           </div>
@@ -72,7 +78,12 @@ export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: Art
         </div>
 
         {/* Title */}
-        <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 leading-snug mb-1.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h2 className={cn(
+          "text-sm font-semibold leading-snug mb-1.5 transition-colors",
+          isRead
+            ? "text-neutral-500 dark:text-neutral-500"
+            : "text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+        )}>
           {article.url ? (
             <a href={article.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
               {article.title || "(Sin título)"}
@@ -83,14 +94,14 @@ export function ArticleCard({ article, isRemoving, onObserve, onUnobserve }: Art
         </h2>
 
         {/* Summary */}
-        {article.summary && (
+        {article.summary && !isRead && (
           <p className="text-sm text-neutral-500 dark:text-neutral-400 line-clamp-3 leading-relaxed">
             {article.summary}
           </p>
         )}
 
         {/* Footer */}
-        {(article.author || article.url) && (
+        {!isRead && (article.author || article.url) && (
           <div className="flex items-center justify-between mt-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
             {article.author && (
               <span className="text-xs text-neutral-400 dark:text-neutral-500 truncate">

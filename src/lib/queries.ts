@@ -1,7 +1,9 @@
 import { db } from "@/db";
 import { articles, feeds, readStatus } from "@/db/schema";
-import { and, asc, eq, gt, inArray, notExists, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, notExists, sql } from "drizzle-orm";
 import type { FeedItem } from "./feed-fetcher";
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 export async function getUserFeeds(userId: string) {
   const result = await db
@@ -15,6 +17,7 @@ export async function getUserFeeds(userId: string) {
       unreadCount: sql<number>`
         COUNT(DISTINCT ${articles.id}) FILTER (
           WHERE ${articles.id} IS NOT NULL
+          AND ${articles.publishedAt} >= NOW() - INTERVAL '3 days'
           AND NOT EXISTS (
             SELECT 1 FROM ${readStatus} rs
             WHERE rs.article_id = ${articles.id}
@@ -55,14 +58,13 @@ export async function getArticles(
 
   if (feedIds.length === 0) return { articles: [], nextCursor: null };
 
-  // Subquery to check if article is read
-  const readSubquery = db
-    .select({ articleId: readStatus.articleId })
-    .from(readStatus)
-    .where(eq(readStatus.userId, userId));
+  const threeDaysAgo = new Date(Date.now() - THREE_DAYS_MS);
 
   const conditions = [
     inArray(articles.feedId, feedIds),
+    // Only last 3 days
+    gte(articles.publishedAt, threeDaysAgo),
+    // Exclude read articles
     notExists(
       db
         .select({ one: sql`1` })

@@ -21,6 +21,7 @@ interface ArticlesResponse {
 export function useArticles(feedId: string | null, feedType?: string | null) {
   return useInfiniteQuery<ArticlesResponse>({
     queryKey: ["articles", feedId, feedType],
+    staleTime: 0,
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
       if (pageParam) params.set("cursor", pageParam as string);

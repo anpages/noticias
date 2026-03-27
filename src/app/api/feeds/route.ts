@@ -33,11 +33,6 @@ export async function POST(req: Request) {
 
   const { url, type } = parsed.data;
 
-  // Limit feeds per user
-  const existing = await getUserFeeds(session.user.id);
-  if (existing.length >= 50) {
-    return NextResponse.json({ error: "Máximo 50 feeds permitidos." }, { status: 400 });
-  }
 
   let feedData;
   try {
@@ -65,11 +60,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ya tienes este feed añadido." }, { status: 409 });
   }
 
-  const latest = feedData.items
-    .filter((i) => i.publishedAt)
-    .sort((a, b) => (b.publishedAt!.getTime() - a.publishedAt!.getTime()))
-    .slice(0, 20);
-  await insertArticles(newFeed.id, latest);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todaysItems = feedData.items.filter((i) => i.publishedAt && i.publishedAt >= startOfToday);
+  await insertArticles(newFeed.id, todaysItems);
 
   return NextResponse.json(newFeed, { status: 201 });
 }

@@ -3,11 +3,10 @@ import { articles, feeds } from "@/db/schema";
 import { fetchFeedByType } from "@/lib/feed-fetcher";
 import type { FeedType } from "@/lib/feed-fetcher";
 import { insertArticles, updateFeedMeta } from "@/lib/queries";
-import { lt, sql, inArray } from "drizzle-orm";
+import { lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_ARTICLES_PER_FEED = 20;
 
 export async function GET(req: Request) {
   // Verify cron secret (Vercel sets this automatically for cron jobs)
@@ -46,21 +45,9 @@ export async function GET(req: Request) {
     .where(lt(articles.publishedAt, sevenDaysAgo))
     .returning({ id: articles.id });
 
-  // 3. Cleanup: keep max N articles per feed
-  const overflow = await db.execute(sql`
-    DELETE FROM articles WHERE id IN (
-      SELECT id FROM (
-        SELECT id, ROW_NUMBER() OVER (PARTITION BY feed_id ORDER BY published_at DESC) as rn
-        FROM articles
-      ) ranked
-      WHERE rn > ${MAX_ARTICLES_PER_FEED}
-    )
-  `);
-
   return NextResponse.json({
     synced: allFeeds.length,
     newArticles,
     deletedOld: deleted.length,
-    trimmedOverflow: overflow.rowCount ?? 0,
   }, { headers: { "Cache-Control": "no-store" } });
 }

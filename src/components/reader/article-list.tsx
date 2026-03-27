@@ -12,10 +12,9 @@ interface ArticleListProps {
   feedId: string | null;
   feedType?: string | null;
   mainRef: React.RefObject<HTMLElement | null>;
-  onArticleClick: (id: string) => void;
 }
 
-export function ArticleList({ feedId, feedType, mainRef, onArticleClick }: ArticleListProps) {
+export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
   useSync();
 
   const queryClient = useQueryClient();
@@ -199,7 +198,6 @@ export function ArticleList({ feedId, feedType, mainRef, onArticleClick }: Artic
           onObserve={observe}
           onUnobserve={unobserve}
           onMarkRead={handleMarkRead}
-          onClick={() => onArticleClick(article.id)}
         />
       ))}
 

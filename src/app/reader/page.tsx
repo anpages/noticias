@@ -4,14 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ArticleList } from "@/components/reader/article-list";
-import { ArticleView } from "@/components/reader/article-view";
+import { DiscoverView } from "@/components/discover/discover-view";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 
 export default function ReaderPage() {
   const [selection, setSelection] = useState<string | null>(null);
-  const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
 
-  // Parse selection: "type:rss" = category filter, UUID = specific feed, null = all rss
+  // Parse selection: "type:rss"/"type:steam" = category filter, UUID = specific feed, "discover" = discover view, null = all
   const feedType = selection?.startsWith("type:") ? selection.slice(5) : (selection ? null : "rss");
   const feedId = selection?.startsWith("type:") ? null : selection;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -79,20 +78,13 @@ export default function ReaderPage() {
           className="bg-neutral-50 dark:bg-neutral-950"
         >
           <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-            {activeArticleId ? (
-              <ArticleView
-                articleId={activeArticleId}
-                onBack={() => { setActiveArticleId(null); }}
-              />
+            {selection === "discover" ? (
+              <DiscoverView />
             ) : (
               <ArticleList
                 feedId={feedId}
                 feedType={feedType}
                 mainRef={mainRef}
-                onArticleClick={(id) => {
-                  setActiveArticleId(id);
-                  if (mainRef.current) mainRef.current.scrollTop = 0;
-                }}
               />
             )}
           </div>

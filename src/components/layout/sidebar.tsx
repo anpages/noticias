@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddFeedForm } from "@/components/feeds/add-feed-form";
 import { FeedItem } from "@/components/feeds/feed-item";
-import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown, Gamepad2 } from "lucide-react";
+import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown, Gamepad2, Compass } from "lucide-react";
 
 
 interface Feed {
@@ -208,7 +208,24 @@ function SidebarContent({
 
       {/* Feed navigation */}
       <nav style={{ flex: 1, overflowY: "auto", padding: "0 6px 16px" }}>
-        {/* === Top-level "Todos" buttons === */}
+        {/* === Descubre === */}
+        <div style={{ marginBottom: 8 }}>
+          <button
+            onClick={() => select("discover")}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, textAlign: "left", fontSize: 14, transition: "background 0.15s" }}
+            className={selection === "discover"
+              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+              : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            }
+          >
+            <Compass size={14} style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>Descubre</span>
+          </button>
+        </div>
+
+        <div style={{ borderTop: "1px solid", marginBottom: 8 }} className="border-neutral-200 dark:border-neutral-800" />
+
+        {/* === Top-level filter buttons === */}
         <div style={{ marginBottom: 8 }}>
           {/* Noticias */}
           <button

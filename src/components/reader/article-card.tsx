@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CheckCheck, ExternalLink, Rss } from "lucide-react";
+import { CheckCheck, Rss } from "lucide-react";
 import { cn, formatRelativeDate } from "@/lib/utils";
 import type { Article } from "@/hooks/use-articles";
 import Image from "next/image";
@@ -12,10 +12,9 @@ interface ArticleCardProps {
   onObserve: (el: HTMLElement | null) => void;
   onUnobserve: (el: HTMLElement | null) => void;
   onMarkRead: (id: string) => void;
-  onClick: () => void;
 }
 
-export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRead, onClick }: ArticleCardProps) {
+export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRead }: ArticleCardProps) {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -29,7 +28,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
     <article
       ref={ref}
       data-article-id={article.id}
-      onClick={onClick}
+      onClick={() => { if (article.url) { onMarkRead(article.id); window.open(article.url, "_blank", "noopener,noreferrer"); } }}
       className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700/60 overflow-hidden hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg hover:shadow-neutral-200/60 dark:hover:shadow-black/40 transition-all duration-300 cursor-pointer"
     >
       {/* Hero image */}
@@ -104,17 +103,6 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
               >
                 <CheckCheck size={13} />
               </button>
-            )}
-            {article.url && (
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1 text-xs text-neutral-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-              >
-                <ExternalLink size={11} />
-              </a>
             )}
           </div>
         </div>

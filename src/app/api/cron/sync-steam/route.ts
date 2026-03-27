@@ -1,27 +1,25 @@
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
 import { fetchFeedByType } from "@/lib/feed-fetcher";
-import type { FeedType } from "@/lib/feed-fetcher";
 import { insertArticles, updateFeedMeta } from "@/lib/queries";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-  // Verify cron secret (Vercel sets this automatically for cron jobs)
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const allFeeds = await db
+  const steamFeeds = await db
     .select({ id: feeds.id, url: feeds.url, type: feeds.type, lastFetched: feeds.lastFetched })
     .from(feeds)
-    .where(eq(feeds.type, "rss"));
+    .where(eq(feeds.type, "steam"));
 
   let newArticles = 0;
   const results = await Promise.allSettled(
-    allFeeds.map(async (feed) => {
-      const data = await fetchFeedByType(feed.url, feed.type as FeedType);
+    steamFeeds.map(async (feed) => {
+      const data = await fetchFeedByType(feed.url, "steam");
       await updateFeedMeta(feed.id, {
         title: data.title,
         description: data.description,
@@ -37,7 +35,7 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
-    synced: allFeeds.length,
+    synced: steamFeeds.length,
     newArticles,
   }, { headers: { "Cache-Control": "no-store" } });
 }

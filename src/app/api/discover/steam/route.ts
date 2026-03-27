@@ -1,53 +1,40 @@
 import { NextResponse } from "next/server";
 
-interface ConcurrentRank {
-  appid: number;
-  concurrent_in_game: number;
-  peak_in_game: number;
-}
-
-interface AppDetail {
+interface FeaturedItem {
+  id: number;
   name: string;
   header_image: string;
-  short_description?: string;
+  discount_percent: number;
+  final_price: number;
+  currency: string;
+}
+
+interface FeaturedCategories {
+  top_sellers?: { items: FeaturedItem[] };
+  specials?: { items: FeaturedItem[] };
 }
 
 export async function GET() {
   try {
-    // 1. Top games by concurrent players
-    const chartsRes = await fetch(
-      "https://api.steampowered.com/ISteamChartsService/GetGamesByConcurrentPlayers/v1/",
+    const res = await fetch(
+      "https://store.steampowered.com/api/featuredcategories/?cc=es&l=spanish",
       { next: { revalidate: 300 }, headers: { "User-Agent": "Noticias-RSS-Reader/1.0" } }
     );
-    if (!chartsRes.ok) throw new Error("Steam charts API failed");
+    if (!res.ok) throw new Error("Steam Store API failed");
 
-    const chartsData = await chartsRes.json();
-    const ranks: ConcurrentRank[] = chartsData?.response?.ranks ?? [];
-    const top = ranks.slice(0, 15);
-    const appids = top.map((r) => r.appid);
+    const data: FeaturedCategories = await res.json();
+    const items = data?.top_sellers?.items ?? [];
 
-    // 2. Resolve names + images in one batch request
-    const detailsRes = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${appids.join(",")}&filters=basic`,
-      { next: { revalidate: 300 }, headers: { "User-Agent": "Noticias-RSS-Reader/1.0" } }
-    );
-    const detailsData = detailsRes.ok ? await detailsRes.json() : {};
-
-    const games = top
-      .map((rank) => {
-        const detail: AppDetail | null = detailsData?.[rank.appid]?.data ?? null;
-        if (!detail) return null;
-        return {
-          appid: rank.appid,
-          name: detail.name,
-          headerImage: detail.header_image,
-          description: detail.short_description ?? null,
-          playerCount: rank.concurrent_in_game,
-          peakCount: rank.peak_in_game,
-          feedUrl: `https://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid=${rank.appid}&count=30&format=json`,
-        };
-      })
-      .filter(Boolean);
+    const games = items
+      .filter((item) => item.name && item.header_image)
+      .slice(0, 16)
+      .map((item) => ({
+        appid: item.id,
+        name: item.name,
+        headerImage: item.header_image,
+        discountPercent: item.discount_percent,
+        feedUrl: `https://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid=${item.id}&count=30&format=json`,
+      }));
 
     return NextResponse.json({ games }, { headers: { "Cache-Control": "public, max-age=300" } });
   } catch {

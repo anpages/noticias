@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useArticles } from "@/hooks/use-articles";
 import { useReadObserver } from "@/hooks/use-read-observer";
-import { useSync } from "@/hooks/use-sync";
 import { ArticleCard } from "./article-card";
 import { CheckCheck, Inbox, Loader2, RefreshCw } from "lucide-react";
 
@@ -15,8 +14,6 @@ interface ArticleListProps {
 }
 
 export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
-  useSync();
-
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
@@ -58,15 +55,6 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
     queryClient.invalidateQueries({ queryKey: ["feeds"] });
   }, [queryClient]);
 
-  // Sync feeds for new articles
-  const syncFeeds = useCallback(() => {
-    return fetch("/api/sync", { method: "POST" })
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: ["articles"] });
-        queryClient.invalidateQueries({ queryKey: ["feeds"] });
-      })
-      .catch(() => {});
-  }, [queryClient]);
 
   // Individual mark as read: delete from DB
   const handleMarkRead = useCallback(
@@ -77,18 +65,17 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
     [deleteAndRefresh]
   );
 
-  // Mark all as read: delete all from DB + sync new
+  // Mark all as read: delete all from DB
   const handleMarkAllRead = useCallback(async () => {
     const allIds = allArticles.map((a) => a.id);
     if (allIds.length === 0) return;
     setMarkingAll(true);
     setReadIds(new Set(allIds));
     await deleteAndRefresh(allIds);
-    await syncFeeds();
     setMarkingAll(false);
     setReadIds(new Set());
     if (mainRef.current) mainRef.current.scrollTop = 0;
-  }, [allArticles, deleteAndRefresh, syncFeeds, mainRef]);
+  }, [allArticles, deleteAndRefresh, mainRef]);
 
   const { observe, unobserve } = useReadObserver(handleScrollRead, mainRef);
 
@@ -156,17 +143,15 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
           onClick={async () => {
             setRefreshing(true);
             setRefreshMsg(null);
-            localStorage.removeItem("rss-last-sync");
             try {
-              const res = await fetch("/api/sync", { method: "POST" });
-              const data = await res.json();
-              queryClient.invalidateQueries({ queryKey: ["feeds"] });
-              await refetch();
-              if (data.newArticles === 0) {
+              await queryClient.invalidateQueries({ queryKey: ["feeds"] });
+              const result = await refetch();
+              const articles = result.data?.pages.flatMap((p) => p.articles) ?? [];
+              if (articles.length === 0) {
                 setRefreshMsg("No hay artículos nuevos por ahora");
               }
             } catch {
-              setRefreshMsg("Error al sincronizar");
+              setRefreshMsg("Error al consultar");
             } finally {
               setRefreshing(false);
             }

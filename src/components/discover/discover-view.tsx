@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Check, Users, Gamepad2, Rss } from "lucide-react";
+import { Loader2, Plus, Check, Gamepad2, Rss } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -23,9 +23,7 @@ interface SteamGame {
   appid: number;
   name: string;
   headerImage: string;
-  description: string | null;
-  playerCount: number;
-  peakCount: number;
+  discountPercent: number;
   feedUrl: string;
 }
 
@@ -42,11 +40,6 @@ const RSS_CATEGORIES = [
   { id: "Web Development", label: "Web Dev" },
 ];
 
-function formatPlayers(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toLocaleString();
-}
 
 function getFavicon(htmlUrl: string | null): string | null {
   if (!htmlUrl) return null;
@@ -151,9 +144,12 @@ function SteamGameCard({
         </p>
 
         <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
-            <Users size={11} />
-            <span>{formatPlayers(game.playerCount)} jugando ahora</span>
+          <div>
+            {game.discountPercent > 0 && (
+              <span className="px-1.5 py-0.5 rounded bg-green-500 text-white text-xs font-medium">
+                -{game.discountPercent}%
+              </span>
+            )}
           </div>
 
           <button

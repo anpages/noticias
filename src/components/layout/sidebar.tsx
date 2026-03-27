@@ -134,9 +134,8 @@ function SidebarContent({
   async function handleSync() {
     setSyncing(true);
     try {
-      await fetch("/api/sync", { method: "POST" });
-      queryClient.invalidateQueries({ queryKey: ["feeds"] });
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
+      await queryClient.invalidateQueries({ queryKey: ["feeds"] });
+      await queryClient.invalidateQueries({ queryKey: ["articles"] });
     } finally {
       setSyncing(false);
     }

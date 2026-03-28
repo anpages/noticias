@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, Rss, Gamepad2 } from "lucide-react";
+import { Trash2, Rss } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
-function FallbackIcon({ type }: { type: string }) {
-  if (type === "steam") return <Gamepad2 size={12} className="text-neutral-400" />;
+function FallbackIcon() {
   return <Rss size={12} className="text-neutral-400" />;
 }
 
@@ -47,8 +46,8 @@ export function FeedItem({ id, type, title, url, favicon, unreadCount: rawCount,
       className={cn(
         "group w-full flex items-center gap-2 px-3 py-2 rounded-md text-left text-sm transition-colors cursor-pointer",
         isActive
-          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-          : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 shadow-[inset_3px_0_0_0_#3b82f6] dark:shadow-[inset_3px_0_0_0_#60a5fa]"
+          : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100/80 dark:hover:bg-white/[0.04]"
       )}
     >
       <span className="shrink-0 w-4 h-4 flex items-center justify-center">
@@ -62,7 +61,7 @@ export function FeedItem({ id, type, title, url, favicon, unreadCount: rawCount,
             onError={() => setImgError(true)}
           />
         ) : (
-          <FallbackIcon type={type} />
+          <FallbackIcon />
         )}
       </span>
       <span className="flex-1 truncate">{displayTitle}</span>

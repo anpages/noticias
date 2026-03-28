@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddFeedForm } from "@/components/feeds/add-feed-form";
 import { FeedItem } from "@/components/feeds/feed-item";
-import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown, Gamepad2, Compass } from "lucide-react";
+import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown } from "lucide-react";
 
 
 interface Feed {
@@ -25,27 +25,13 @@ interface SidebarProps {
   onCollapse?: () => void;
 }
 
-interface CategoryConfig {
-  type: string;
-  label: string;
-  icon: React.ReactNode;
-  selectionKey: string;
-}
-
-const CATEGORIES: CategoryConfig[] = [
-  { type: "rss", label: "Noticias", icon: <Rss size={13} />, selectionKey: "type:rss" },
-  { type: "steam", label: "Steam", icon: <Gamepad2 size={13} />, selectionKey: "type:steam" },
-];
-
-function CategorySection({
-  config,
+function FeedsSection({
   feeds,
   selection,
   onSelect,
   isDrawer,
   onClose,
 }: {
-  config: CategoryConfig;
   feeds: Feed[];
   selection: string | null;
   onSelect: (value: string | null) => void;
@@ -62,14 +48,13 @@ function CategorySection({
   function toggleCollapse() {
     const next = !collapsed;
     setCollapsed(next);
-    localStorage.setItem(`cat_${config.type}`, next ? "collapsed" : "open");
+    localStorage.setItem("cat_rss", next ? "collapsed" : "open");
   }
 
   if (feeds.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 2 }}>
-      {/* Category header — click to collapse/expand */}
       <button
         onClick={toggleCollapse}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}
@@ -80,15 +65,14 @@ function CategorySection({
           style={{ transition: "transform 0.2s", transform: collapsed ? "rotate(-90deg)" : "rotate(0)" }}
         />
         <span className="flex items-center gap-1.5">
-          {config.icon}
-          {config.label}
+          <Rss size={13} />
+          Noticias
         </span>
         <span className="text-neutral-300 dark:text-neutral-600" style={{ marginLeft: "auto", fontSize: 10 }}>
           {feeds.length}
         </span>
       </button>
 
-      {/* Individual feeds — only when expanded */}
       {!collapsed && (
         <div>
           {feeds.map((feed) => (
@@ -146,21 +130,8 @@ function SidebarContent({
     if (isDrawer) onClose?.();
   }
 
-  // Group feeds by type
-  const feedsByType: Record<string, Feed[]> = { rss: [], steam: [] };
-  for (const feed of feeds) {
-    const type = feed.type || "rss";
-    if (!feedsByType[type]) feedsByType[type] = [];
-    feedsByType[type].push(feed);
-  }
-
-  // Unread counts per type
-  function unreadForType(type: string) {
-    return (feedsByType[type] ?? []).reduce((acc, f) => acc + (Number(f.unreadCount) || 0), 0);
-  }
-
-  const rssUnread = unreadForType("rss");
-  const steamUnread = unreadForType("steam");
+  const rssFeeds = feeds.filter((f) => !f.type || f.type === "rss");
+  const rssUnread = rssFeeds.reduce((acc, f) => acc + (Number(f.unreadCount) || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -207,32 +178,14 @@ function SidebarContent({
 
       {/* Feed navigation */}
       <nav style={{ flex: 1, overflowY: "auto", padding: "0 6px 16px" }}>
-        {/* === Descubre === */}
+        {/* === Top-level filter button === */}
         <div style={{ marginBottom: 8 }}>
           <button
-            onClick={() => select("discover")}
+            onClick={() => select(null)}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, textAlign: "left", fontSize: 14, transition: "background 0.15s" }}
-            className={selection === "discover"
-              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            }
-          >
-            <Compass size={14} style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1 }}>Descubre</span>
-          </button>
-        </div>
-
-        <div style={{ borderTop: "1px solid", marginBottom: 8 }} className="border-neutral-200 dark:border-neutral-800" />
-
-        {/* === Top-level filter buttons === */}
-        <div style={{ marginBottom: 8 }}>
-          {/* Noticias */}
-          <button
-            onClick={() => select("type:rss")}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, textAlign: "left", fontSize: 14, transition: "background 0.15s" }}
-            className={selection === "type:rss" || selection === null
-              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className={selection === null || selection === "type:rss"
+              ? "bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 shadow-[inset_3px_0_0_0_#3b82f6] dark:shadow-[inset_3px_0_0_0_#60a5fa]"
+              : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100/80 dark:hover:bg-white/[0.04]"
             }
           >
             <Rss size={14} style={{ flexShrink: 0 }} />
@@ -244,46 +197,23 @@ function SidebarContent({
               </span>
             )}
           </button>
-
-          {/* Steam */}
-          <button
-            onClick={() => select("type:steam")}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, textAlign: "left", fontSize: 14, transition: "background 0.15s" }}
-            className={selection === "type:steam"
-              ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            }
-          >
-            <Gamepad2 size={14} style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1 }}>Steam</span>
-            {steamUnread > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 600, minWidth: 20, textAlign: "center", padding: "1px 6px", borderRadius: 999 }}
-                className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                {steamUnread > 999 ? "999+" : steamUnread}
-              </span>
-            )}
-          </button>
         </div>
 
-        {/* === Collapsible category sections with individual feeds === */}
+        {/* === Collapsible feed list === */}
         <div style={{ borderTop: "1px solid", paddingTop: 8 }} className="border-neutral-200 dark:border-neutral-800">
-          {CATEGORIES.map((config) => (
-            <CategorySection
-              key={config.type}
-              config={config}
-              feeds={feedsByType[config.type] ?? []}
-              selection={selection}
-              onSelect={onSelect}
-              isDrawer={isDrawer}
-              onClose={onClose}
-            />
-          ))}
+          <FeedsSection
+            feeds={rssFeeds}
+            selection={selection}
+            onSelect={onSelect}
+            isDrawer={isDrawer}
+            onClose={onClose}
+          />
         </div>
 
         {feeds.length === 0 && (
           <p style={{ fontSize: 12, textAlign: "center", padding: "24px 12px", lineHeight: 1.5 }}
             className="text-neutral-400 dark:text-neutral-500">
-            Busca feeds RSS o juegos de Steam para empezar
+            Busca feeds RSS para empezar
           </p>
         )}
       </nav>
@@ -311,7 +241,7 @@ export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer =
             transform: open ? "translateX(0)" : "translateX(-100%)",
             transition: "transform 0.28s ease",
           }}
-          className="bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800"
+          className="bg-white/70 dark:bg-neutral-950/80 backdrop-blur-xl border-r border-neutral-200/60 dark:border-white/[0.05]"
         >
           <SidebarContent
             selection={selection}
@@ -327,7 +257,7 @@ export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer =
   return (
     <div
       style={{ width: 256, minWidth: 256, overflow: "hidden", height: "100%" }}
-      className="bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800"
+      className="bg-white/70 dark:bg-neutral-950/80 backdrop-blur-xl border-r border-neutral-200/60 dark:border-white/[0.05]"
     >
       <SidebarContent
         selection={selection}

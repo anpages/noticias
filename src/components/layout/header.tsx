@@ -15,8 +15,8 @@ export function Header({ showMenuButton, onMenuClick }: HeaderProps) {
 
   return (
     <header
-      style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", zIndex: 20 }}
-      className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+      style={{ height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", zIndex: 20, position: "sticky", top: 0 }}
+      className="border-b border-neutral-200/60 dark:border-white/[0.05] bg-white/80 dark:bg-neutral-950/85 backdrop-blur-xl"
     >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {showMenuButton && (

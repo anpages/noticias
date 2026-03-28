@@ -4,13 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ArticleList } from "@/components/reader/article-list";
-import { DiscoverView } from "@/components/discover/discover-view";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
 
 export default function ReaderPage() {
   const [selection, setSelection] = useState<string | null>(null);
 
-  // Parse selection: "type:rss"/"type:steam" = category filter, UUID = specific feed, "discover" = discover view, null = all
+  // Parse selection: UUID = specific feed, null = all RSS
   const feedType = selection?.startsWith("type:") ? selection.slice(5) : (selection ? null : "rss");
   const feedId = selection?.startsWith("type:") ? null : selection;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -21,10 +20,37 @@ export default function ReaderPage() {
   const mainRef = useRef<HTMLElement>(null);
   const isDesktop = useIsDesktop();
 
+  // Restore scroll position when returning from an article (mobile page unload/reload)
   useEffect(() => {
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-    if (mainRef.current) mainRef.current.scrollTop = 0;
+
+    const saved = sessionStorage.getItem("reader-scroll");
+    if (saved && mainRef.current) {
+      mainRef.current.scrollTop = parseInt(saved, 10);
+    }
+    sessionStorage.removeItem("reader-scroll");
+
+    function saveScroll() {
+      if (mainRef.current && mainRef.current.scrollTop > 0) {
+        sessionStorage.setItem("reader-scroll", String(mainRef.current.scrollTop));
+      }
+    }
+
+    window.addEventListener("pagehide", saveScroll);
+    window.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") saveScroll();
+    });
+
+    return () => {
+      window.removeEventListener("pagehide", saveScroll);
+    };
   }, []);
+
+  // Clear saved scroll when the user deliberately changes feed
+  function handleSelect(value: string | null) {
+    sessionStorage.removeItem("reader-scroll");
+    setSelection(value);
+  }
 
   // Close drawer when switching to desktop
   useEffect(() => {
@@ -54,7 +80,7 @@ export default function ReaderPage() {
           }}>
             <Sidebar
               selection={selection}
-              onSelect={setSelection}
+              onSelect={handleSelect}
               onCollapse={() => { setSidebarVisible(false); localStorage.setItem("sidebar", "hidden"); }}
             />
           </div>
@@ -64,7 +90,7 @@ export default function ReaderPage() {
         {!isDesktop && (
           <Sidebar
             selection={selection}
-            onSelect={setSelection}
+            onSelect={handleSelect}
             isDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
@@ -75,18 +101,14 @@ export default function ReaderPage() {
         <main
           ref={mainRef}
           style={{ flex: 1, overflowY: "auto", minWidth: 0 }}
-          className="bg-neutral-50 dark:bg-neutral-950"
+          className="bg-[#f1f1f2] dark:bg-[#08080a]"
         >
           <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-            {selection === "discover" ? (
-              <DiscoverView />
-            ) : (
-              <ArticleList
-                feedId={feedId}
-                feedType={feedType}
-                mainRef={mainRef}
-              />
-            )}
+            <ArticleList
+              feedId={feedId}
+              feedType={feedType}
+              mainRef={mainRef}
+            />
           </div>
         </main>
       </div>

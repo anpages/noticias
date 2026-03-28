@@ -8,10 +8,10 @@ export default async function HomePage() {
   if (session) redirect("/reader");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50/60 via-neutral-50 to-neutral-50 dark:from-blue-950/20 dark:via-neutral-950 dark:to-neutral-950">
       <div className="text-center px-6 w-full max-w-sm mx-auto">
         <div className="flex justify-center mb-6">
-          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-500 text-white shadow-lg">
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-200 dark:shadow-blue-950/60">
             <Rss size={32} />
           </div>
         </div>
@@ -29,7 +29,7 @@ export default async function HomePage() {
         >
           <button
             type="submit"
-            className="inline-flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 shadow-sm transition-colors"
+            className="inline-flex items-center gap-3 px-6 py-3 bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/60 rounded-xl text-sm font-medium text-neutral-800 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 shadow-sm hover:shadow-md transition-all"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
               <path

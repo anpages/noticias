@@ -29,7 +29,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
       ref={ref}
       data-article-id={article.id}
       onClick={() => { if (article.url) { onMarkRead(article.id); window.open(article.url, "_blank", "noopener,noreferrer"); } }}
-      className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-700/60 overflow-hidden hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg hover:shadow-neutral-200/60 dark:hover:shadow-black/40 transition-all duration-300 cursor-pointer"
+      className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/70 dark:border-neutral-700/40 overflow-hidden hover:border-blue-200/80 dark:hover:border-neutral-600/60 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-black/70 transition-all duration-300 cursor-pointer"
     >
       {/* Hero image */}
       {article.imageUrl && (
@@ -45,6 +45,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
               if (wrapper) wrapper.style.display = "none";
             }}
           />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
         </div>
       )}
 

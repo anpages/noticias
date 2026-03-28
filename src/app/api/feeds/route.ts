@@ -1,15 +1,13 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
-import { fetchFeedByType } from "@/lib/feed-fetcher";
-import type { FeedType } from "@/lib/feed-fetcher";
+import { fetchFeed } from "@/lib/feed-fetcher";
 import { getUserFeeds, insertArticles } from "@/lib/queries";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const addFeedSchema = z.object({
   url: z.string().url("URL inválida"),
-  type: z.enum(["rss", "steam"]).default("rss"),
 });
 
 export async function GET() {
@@ -31,12 +29,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: issues[0]?.message ?? "URL inválida" }, { status: 400 });
   }
 
-  const { url, type } = parsed.data;
-
+  const { url } = parsed.data;
 
   let feedData;
   try {
-    feedData = await fetchFeedByType(url, type as FeedType);
+    feedData = await fetchFeed(url);
   } catch {
     return NextResponse.json({ error: "No se pudo leer el feed. Verifica la URL." }, { status: 400 });
   }
@@ -45,7 +42,7 @@ export async function POST(req: Request) {
     .insert(feeds)
     .values({
       userId: session.user.id,
-      type,
+      type: "rss",
       url,
       title: feedData.title,
       description: feedData.description,

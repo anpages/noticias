@@ -1,7 +1,6 @@
 import { db } from "@/db";
 import { feeds } from "@/db/schema";
-import { fetchFeedByType } from "@/lib/feed-fetcher";
-import type { FeedType } from "@/lib/feed-fetcher";
+import { fetchFeed } from "@/lib/feed-fetcher";
 import { insertArticles, updateFeedMeta } from "@/lib/queries";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -21,7 +20,7 @@ export async function GET(req: Request) {
   let newArticles = 0;
   const results = await Promise.allSettled(
     allFeeds.map(async (feed) => {
-      const data = await fetchFeedByType(feed.url, feed.type as FeedType);
+      const data = await fetchFeed(feed.url);
       await updateFeedMeta(feed.id, {
         title: data.title,
         description: data.description,

@@ -23,6 +23,18 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
   // Keep a ref so pagehide handler always sees the latest readIds
   const readIdsRef = useRef<Set<string>>(new Set());
 
+  // Restore readIds from sessionStorage on mount (survives client-side navigation)
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("readIds");
+      if (saved) {
+        const restored = new Set<string>(JSON.parse(saved));
+        setReadIds(restored);
+        readIdsRef.current = restored;
+      }
+    } catch {}
+  }, []);
+
   const {
     data,
     fetchNextPage,
@@ -40,12 +52,20 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
     setReadIds((prev) => {
       const next = new Set([...prev, ...ids]);
       readIdsRef.current = next;
+      try { sessionStorage.setItem("readIds", JSON.stringify([...next])); } catch {}
       return next;
     });
   }, []);
 
   const handleScrollRead = useCallback((ids: string[]) => markRead(ids), [markRead]);
-  const handleMarkRead = useCallback((id: string) => markRead([id]), [markRead]);
+
+  // Save scroll before navigating to article so we can restore on back
+  const handleMarkRead = useCallback((id: string) => {
+    if (mainRef.current && mainRef.current.scrollTop > 0) {
+      sessionStorage.setItem("reader-scroll", String(mainRef.current.scrollTop));
+    }
+    markRead([id]);
+  }, [markRead, mainRef]);
 
   // Flush pending reads to DB (fire-and-forget)
   function flushToDB(ids: string[]) {
@@ -72,6 +92,7 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
     setMarkingAll(false);
     setReadIds(new Set());
     readIdsRef.current = new Set();
+    try { sessionStorage.removeItem("readIds"); } catch {}
     if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [allArticles, queryClient, mainRef]);
 
@@ -89,6 +110,7 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
       // Clear so a second flush (e.g. pagehide after visibilitychange) doesn't double-send
       readIdsRef.current = new Set();
       pendingIdsRef.current.clear();
+      try { sessionStorage.removeItem("readIds"); } catch {}
     }
     function onVisibility() {
       if (document.visibilityState === "hidden") flush();

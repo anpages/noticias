@@ -4,51 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ArticleList } from "@/components/reader/article-list";
+import { ArticleModal } from "@/components/reader/article-modal";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
+import type { Article } from "@/hooks/use-articles";
 
 export default function ReaderPage() {
   const [selection, setSelection] = useState<string | null>(null);
-
-  // Parse selection: UUID = specific feed, null = all RSS
   const feedType = selection?.startsWith("type:") ? selection.slice(5) : (selection ? null : "rss");
   const feedId = selection?.startsWith("type:") ? null : selection;
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("sidebar") !== "hidden";
   });
+  const [openArticle, setOpenArticle] = useState<Article | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const isDesktop = useIsDesktop();
 
-  // Restore scroll position when returning from an article (mobile page unload/reload)
-  useEffect(() => {
-    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-
-    const saved = sessionStorage.getItem("reader-scroll");
-    if (saved && mainRef.current) {
-      mainRef.current.scrollTop = parseInt(saved, 10);
-    }
-    sessionStorage.removeItem("reader-scroll");
-
-    function saveScroll() {
-      if (mainRef.current && mainRef.current.scrollTop > 0) {
-        sessionStorage.setItem("reader-scroll", String(mainRef.current.scrollTop));
-      }
-    }
-
-    window.addEventListener("pagehide", saveScroll);
-    window.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") saveScroll();
-    });
-
-    return () => {
-      window.removeEventListener("pagehide", saveScroll);
-    };
-  }, []);
-
-  // Clear saved scroll when the user deliberately changes feed
   function handleSelect(value: string | null) {
-    sessionStorage.removeItem("reader-scroll");
     setSelection(value);
   }
 
@@ -69,7 +43,6 @@ export default function ReaderPage() {
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
 
-        {/* Desktop sidebar — collapsible with animation */}
         {isDesktop && (
           <div style={{
             width: sidebarVisible ? 256 : 0,
@@ -86,7 +59,6 @@ export default function ReaderPage() {
           </div>
         )}
 
-        {/* Mobile drawer — only rendered when mobile */}
         {!isDesktop && (
           <Sidebar
             selection={selection}
@@ -97,7 +69,6 @@ export default function ReaderPage() {
           />
         )}
 
-        {/* Main content — always visible */}
         <main
           ref={mainRef}
           style={{ flex: 1, overflowY: "auto", minWidth: 0 }}
@@ -108,10 +79,16 @@ export default function ReaderPage() {
               feedId={feedId}
               feedType={feedType}
               mainRef={mainRef}
+              onOpenArticle={setOpenArticle}
             />
           </div>
         </main>
       </div>
+
+      <ArticleModal
+        article={openArticle}
+        onClose={() => setOpenArticle(null)}
+      />
     </div>
   );
 }

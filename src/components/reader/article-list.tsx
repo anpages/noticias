@@ -7,13 +7,16 @@ import { useReadObserver } from "@/hooks/use-read-observer";
 import { ArticleCard } from "./article-card";
 import { CheckCheck, Inbox, Loader2, RefreshCw } from "lucide-react";
 
+import type { Article } from "@/hooks/use-articles";
+
 interface ArticleListProps {
   feedId: string | null;
   feedType?: string | null;
   mainRef: React.RefObject<HTMLElement | null>;
+  onOpenArticle: (article: Article) => void;
 }
 
-export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
+export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: ArticleListProps) {
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
@@ -59,13 +62,9 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
 
   const handleScrollRead = useCallback((ids: string[]) => markRead(ids), [markRead]);
 
-  // Save scroll before navigating to article so we can restore on back
   const handleMarkRead = useCallback((id: string) => {
-    if (mainRef.current && mainRef.current.scrollTop > 0) {
-      sessionStorage.setItem("reader-scroll", String(mainRef.current.scrollTop));
-    }
     markRead([id]);
-  }, [markRead, mainRef]);
+  }, [markRead]);
 
   // Flush pending reads to DB (fire-and-forget)
   function flushToDB(ids: string[]) {
@@ -225,6 +224,7 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
           onObserve={observe}
           onUnobserve={unobserve}
           onMarkRead={handleMarkRead}
+          onOpen={onOpenArticle}
         />
       ))}
 

@@ -14,6 +14,19 @@ export async function GET(
   if (!article?.url) return NextResponse.json({ content: null });
 
   try {
+    // Use stored RSS content first (content:encoded) — no network needed
+    if (article.content && article.content.length > 200) {
+      const sanitized = article.content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+        .replace(/\bon\w+="[^"]*"/gi, "")
+        .replace(/\bon\w+='[^']*'/gi, "");
+      return NextResponse.json(
+        { content: sanitized },
+        { headers: { "Cache-Control": "private, max-age=3600" } }
+      );
+    }
+
     const { JSDOM } = await import("jsdom");
     const { Readability } = await import("@mozilla/readability");
 

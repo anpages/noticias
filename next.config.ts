@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverExternalPackages: ["rss-parser"],
+  serverExternalPackages: ["rss-parser", "jsdom", "@mozilla/readability"],
 };
 
 export default nextConfig;

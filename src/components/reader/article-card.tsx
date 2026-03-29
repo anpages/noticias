@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCheck, Rss } from "lucide-react";
 import { cn, formatRelativeDate } from "@/lib/utils";
 import type { Article } from "@/hooks/use-articles";
@@ -16,6 +17,7 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRead }: ArticleCardProps) {
   const ref = useRef<HTMLElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const el = ref.current;
@@ -28,7 +30,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
     <article
       ref={ref}
       data-article-id={article.id}
-      onClick={() => { if (article.url) { onMarkRead(article.id); window.open(article.url, "_blank", "noopener,noreferrer"); } }}
+      onClick={() => { onMarkRead(article.id); router.push(`/reader/article/${article.id}`); }}
       className="group bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200/70 dark:border-neutral-700/40 overflow-hidden hover:border-blue-200/80 dark:hover:border-neutral-600/60 hover:shadow-xl hover:shadow-blue-100/50 dark:hover:shadow-black/70 transition-all duration-300 cursor-pointer"
     >
       {/* Hero image */}

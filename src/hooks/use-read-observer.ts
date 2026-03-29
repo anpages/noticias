@@ -54,5 +54,5 @@ export function useReadObserver(
   const observe = useCallback((_el: HTMLElement | null) => {}, []);
   const unobserve = useCallback((_el: HTMLElement | null) => {}, []);
 
-  return { observe, unobserve };
+  return { observe, unobserve, pendingIdsRef: pendingIds };
 }

@@ -1,10 +1,6 @@
-const CACHE_NAME = "rss-reader-v2";
-const APP_SHELL = ["/", "/reader"];
+const CACHE_NAME = "rss-reader-v3";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-  );
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -43,7 +39,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first for everything else (scripts, styles, navigation)
+  // Navigation (HTML): always network, no cache fallback — avoids stale app shell
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Network-first for everything else (scripts, styles)
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );

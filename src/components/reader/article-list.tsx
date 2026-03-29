@@ -20,6 +20,9 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
+  // Keep a ref so pagehide handler always sees the latest readIds
+  const readIdsRef = useRef<Set<string>>(new Set());
+
   const {
     data,
     fetchNextPage,
@@ -32,52 +35,60 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
-  // Scroll-based read: visual + delete from DB
-  const handleScrollRead = useCallback((ids: string[]) => {
-    setReadIds((prev) => new Set([...prev, ...ids]));
+  // Mark as read locally only — articles stay in the list until flush
+  const markRead = useCallback((ids: string[]) => {
+    setReadIds((prev) => {
+      const next = new Set([...prev, ...ids]);
+      readIdsRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const handleScrollRead = useCallback((ids: string[]) => markRead(ids), [markRead]);
+  const handleMarkRead = useCallback((id: string) => markRead([id]), [markRead]);
+
+  // Flush pending reads to DB (fire-and-forget)
+  function flushToDB(ids: string[]) {
+    if (ids.length === 0) return;
     fetch("/api/read", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ articleIds: ids }),
-    }).then(() => {
-      queryClient.invalidateQueries({ queryKey: ["feeds"] });
     }).catch(() => {});
-  }, [queryClient]);
+  }
 
-  // Delete articles from DB and refresh
-  const deleteAndRefresh = useCallback(async (ids: string[]) => {
-    await fetch("/api/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ articleIds: ids }),
-    }).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ["articles"] });
-    queryClient.invalidateQueries({ queryKey: ["feeds"] });
-  }, [queryClient]);
-
-
-  // Individual mark as read: delete from DB
-  const handleMarkRead = useCallback(
-    async (id: string) => {
-      setReadIds((prev) => new Set([...prev, id]));
-      await deleteAndRefresh([id]);
-    },
-    [deleteAndRefresh]
-  );
-
-  // Mark all as read: delete all from DB
+  // "Completar sección": flush all visible articles to DB then refresh
   const handleMarkAllRead = useCallback(async () => {
     const allIds = allArticles.map((a) => a.id);
     if (allIds.length === 0) return;
     setMarkingAll(true);
     setReadIds(new Set(allIds));
-    await deleteAndRefresh(allIds);
+    readIdsRef.current = new Set(allIds);
+    flushToDB(allIds);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["articles"] }),
+      queryClient.invalidateQueries({ queryKey: ["feeds"] }),
+    ]);
     setMarkingAll(false);
     setReadIds(new Set());
+    readIdsRef.current = new Set();
     if (mainRef.current) mainRef.current.scrollTop = 0;
-  }, [allArticles, deleteAndRefresh, mainRef]);
+  }, [allArticles, queryClient, mainRef]);
 
-  const { observe, unobserve } = useReadObserver(handleScrollRead, mainRef);
+  const { observe, unobserve, pendingIdsRef } = useReadObserver(handleScrollRead, mainRef);
+
+  // On page close/refresh: flush via sendBeacon so the request survives navigation.
+  // Merge readIdsRef (already processed) with pendingIdsRef (observer debounce not yet fired).
+  useEffect(() => {
+    function flush() {
+      const ids = new Set([...readIdsRef.current, ...pendingIdsRef.current]);
+      if (ids.size === 0) return;
+      const blob = new Blob([JSON.stringify({ articleIds: [...ids] })], { type: "application/json" });
+      navigator.sendBeacon("/api/read", blob);
+    }
+    window.addEventListener("pagehide", flush);
+    return () => window.removeEventListener("pagehide", flush);
+  }, [pendingIdsRef]);
 
   // Infinite scroll sentinel
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -171,8 +182,6 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
     );
   }
 
-  const hasUnread = allArticles.some((a) => !readIds.has(a.id));
-
   return (
     <div className="space-y-3 pb-8">
       {allArticles.map((article) => (
@@ -194,7 +203,7 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
         </div>
       )}
 
-      {/* Mark all read — only when no more pages to load */}
+      {/* Completar sección — only when no more pages to load */}
       {!hasNextPage && !isFetchingNextPage && allArticles.length > 0 && (
         <div className="flex flex-col items-center gap-2 py-6">
           <button

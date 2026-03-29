@@ -66,7 +66,7 @@ function FeedsSection({
         />
         <span className="flex items-center gap-1.5">
           <Rss size={13} />
-          Noticias
+          Fuentes
         </span>
         <span className="text-neutral-300 dark:text-neutral-600" style={{ marginLeft: "auto", fontSize: 10 }}>
           {feeds.length}

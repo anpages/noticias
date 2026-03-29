@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ExternalLink, Loader2, RefreshCw } from "lucide-react";
-import Image from "next/image";
 import { formatRelativeDate } from "@/lib/utils";
 import type { Article } from "@/hooks/use-articles";
 
@@ -54,7 +53,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
   return (
     <div
       style={{ position: "fixed", inset: 0, zIndex: 50 }}
-      className="bg-[#f1f1f2] dark:bg-[#08080a] flex flex-col animate-modal-enter"
+      className="bg-white dark:bg-neutral-950 flex flex-col animate-modal-enter"
     >
       {/* Sticky header */}
       <header className="shrink-0 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/60 dark:border-white/[0.05]">
@@ -104,23 +103,6 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 leading-snug mb-6">
             {article.title}
           </h1>
-
-          {/* Hero image */}
-          {article.imageUrl && (
-            <div style={{ position: "relative", width: "100%", height: 220 }} className="rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 mb-6">
-              <Image
-                src={article.imageUrl}
-                alt={article.title ?? ""}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, 672px"
-                onError={(e) => {
-                  const w = (e.target as HTMLImageElement).parentElement;
-                  if (w) w.style.display = "none";
-                }}
-              />
-            </div>
-          )}
 
           {/* Content */}
           {loading ? (

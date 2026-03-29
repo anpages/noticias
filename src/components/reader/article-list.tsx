@@ -50,14 +50,14 @@ export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: Articl
 
   const allArticles = data?.pages.flatMap((p) => p.articles) ?? [];
 
-  // Mark as read locally only — articles stay in the list until flush
+  // Mark as read locally only — articles stay in the list until flush.
+  // Update ref and sessionStorage synchronously so pagehide always sees
+  // the latest state even if React hasn't flushed the render yet.
   const markRead = useCallback((ids: string[]) => {
-    setReadIds((prev) => {
-      const next = new Set([...prev, ...ids]);
-      readIdsRef.current = next;
-      try { sessionStorage.setItem("readIds", JSON.stringify([...next])); } catch {}
-      return next;
-    });
+    const next = new Set([...readIdsRef.current, ...ids]);
+    readIdsRef.current = next;
+    try { sessionStorage.setItem("readIds", JSON.stringify([...next])); } catch {}
+    setReadIds(next);
   }, []);
 
   const handleScrollRead = useCallback((ids: string[]) => markRead(ids), [markRead]);

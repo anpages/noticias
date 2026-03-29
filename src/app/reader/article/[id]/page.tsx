@@ -33,7 +33,7 @@ export default async function ArticleReaderPage({
       : null;
 
   return (
-    <div style={{ minHeight: "100dvh" }} className="bg-[#f1f1f2] dark:bg-[#08080a]">
+    <div style={{ minHeight: "100dvh" }} className="bg-[#f1f1f2] dark:bg-[#08080a] animate-page-enter">
       {/* Sticky header */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/60 dark:border-white/[0.05]">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

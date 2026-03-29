@@ -1,34 +1,18 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getArticleById } from "@/lib/queries";
-import { Readability } from "@mozilla/readability";
-import { JSDOM } from "jsdom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatRelativeDate } from "@/lib/utils";
+import { ArticleContent } from "./article-content";
 
-async function extractContent(html: string, baseUrl: string): Promise<string | null> {
-  try {
-    const dom = new JSDOM(`<!DOCTYPE html><html><body>${html}</body></html>`, { url: baseUrl });
-    return new Readability(dom.window.document).parse()?.content ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchAndExtract(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; NewsReader/1.0)" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const dom = new JSDOM(html, { url });
-    return new Readability(dom.window.document).parse()?.content ?? null;
-  } catch {
-    return null;
-  }
+/** Strip scripts and event handlers from RSS HTML — lightweight server-side sanitization. */
+function sanitize(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/\bon\w+="[^"]*"/gi, "")
+    .replace(/\bon\w+='[^']*'/gi, "");
 }
 
 export default async function ArticleReaderPage({
@@ -43,18 +27,10 @@ export default async function ArticleReaderPage({
   const article = await getArticleById(session.user.id, id);
   if (!article) redirect("/reader");
 
-  const baseUrl = article.url ?? article.feedSiteUrl ?? "https://example.com";
-
-  // 1. Try stored RSS content (content:encoded — often already full article)
-  let content: string | null = null;
-  if (article.content && article.content.length > 200) {
-    content = await extractContent(article.content, baseUrl);
-  }
-
-  // 2. Fall back to fetching and parsing the original URL
-  if (!content && article.url) {
-    content = await fetchAndExtract(article.url);
-  }
+  const rssContent =
+    article.content && article.content.length > 200
+      ? sanitize(article.content)
+      : null;
 
   return (
     <div style={{ minHeight: "100dvh" }} className="bg-[#f1f1f2] dark:bg-[#08080a]">
@@ -115,30 +91,12 @@ export default async function ArticleReaderPage({
           />
         )}
 
-        {/* Article content */}
-        {content ? (
-          <div
-            className="prose prose-neutral dark:prose-invert prose-sm sm:prose-base max-w-none prose-img:rounded-lg prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-headings:font-bold"
-            dangerouslySetInnerHTML={{ __html: content }}
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm">
-              No se pudo extraer el contenido del artículo.
-            </p>
-            {article.url && (
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shadow-sm"
-              >
-                <ExternalLink size={14} />
-                Abrir artículo original
-              </a>
-            )}
-          </div>
-        )}
+        {/* Content: RSS content inline, or client-side extractor for full page */}
+        <ArticleContent
+          rssContent={rssContent}
+          articleUrl={article.url}
+          articleId={article.id}
+        />
       </main>
     </div>
   );

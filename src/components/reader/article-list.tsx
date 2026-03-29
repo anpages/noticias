@@ -77,17 +77,28 @@ export function ArticleList({ feedId, feedType, mainRef }: ArticleListProps) {
 
   const { observe, unobserve, pendingIdsRef } = useReadObserver(handleScrollRead, mainRef);
 
-  // On page close/refresh: flush via sendBeacon so the request survives navigation.
+  // On page close/refresh/background: flush via sendBeacon so the request survives navigation.
   // Merge readIdsRef (already processed) with pendingIdsRef (observer debounce not yet fired).
+  // pagehide: desktop + Android. visibilitychange hidden: iOS Safari and mobile app switch.
   useEffect(() => {
     function flush() {
       const ids = new Set([...readIdsRef.current, ...pendingIdsRef.current]);
       if (ids.size === 0) return;
       const blob = new Blob([JSON.stringify({ articleIds: [...ids] })], { type: "application/json" });
       navigator.sendBeacon("/api/read", blob);
+      // Clear so a second flush (e.g. pagehide after visibilitychange) doesn't double-send
+      readIdsRef.current = new Set();
+      pendingIdsRef.current.clear();
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flush();
     }
     window.addEventListener("pagehide", flush);
-    return () => window.removeEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [pendingIdsRef]);
 
   // Infinite scroll sentinel

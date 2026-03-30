@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AddFeedForm } from "@/components/feeds/add-feed-form";
 import { FeedItem } from "@/components/feeds/feed-item";
-import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown } from "lucide-react";
+import { Rss, RefreshCw, X, PanelLeftClose, ChevronDown, ALargeSmall } from "lucide-react";
 
 
 interface Feed {
@@ -23,6 +23,11 @@ interface SidebarProps {
   onClose?: () => void;
   isDrawer?: boolean;
   onCollapse?: () => void;
+  fontSize?: number;
+  onFontIncrease?: () => void;
+  onFontDecrease?: () => void;
+  fontSizeMin?: boolean;
+  fontSizeMax?: boolean;
 }
 
 function FeedsSection({
@@ -100,12 +105,22 @@ function SidebarContent({
   onClose,
   isDrawer,
   onCollapse,
+  fontSize,
+  onFontIncrease,
+  onFontDecrease,
+  fontSizeMin,
+  fontSizeMax,
 }: {
   selection: string | null;
   onSelect: (value: string | null) => void;
   onClose?: () => void;
   isDrawer?: boolean;
   onCollapse?: () => void;
+  fontSize?: number;
+  onFontIncrease?: () => void;
+  onFontDecrease?: () => void;
+  fontSizeMin?: boolean;
+  fontSizeMax?: boolean;
 }) {
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
@@ -217,11 +232,49 @@ function SidebarContent({
           </p>
         )}
       </nav>
+
+      {/* Font size control */}
+      {onFontIncrease && onFontDecrease && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid" }}
+          className="border-neutral-200 dark:border-neutral-800">
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ALargeSmall size={13} className="text-neutral-400 dark:text-neutral-500 shrink-0" />
+            <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", flex: 1 }}
+              className="text-neutral-400 dark:text-neutral-500">
+              Texto
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <button
+                onClick={onFontDecrease}
+                disabled={fontSizeMin}
+                title="Reducir texto"
+                style={{ width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, lineHeight: 1 }}
+                className="text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-800 dark:hover:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                A
+              </button>
+              <span style={{ fontSize: 11, minWidth: 26, textAlign: "center", tabularNums: true } as React.CSSProperties}
+                className="text-neutral-400 dark:text-neutral-500 font-medium">
+                {fontSize}
+              </span>
+              <button
+                onClick={onFontIncrease}
+                disabled={fontSizeMax}
+                title="Aumentar texto"
+                style={{ width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: 700, lineHeight: 1 }}
+                className="text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-800 dark:hover:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                A
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer = false, onCollapse }: SidebarProps) {
+export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer = false, onCollapse, fontSize, onFontIncrease, onFontDecrease, fontSizeMin, fontSizeMax }: SidebarProps) {
   if (isDrawer) {
     return (
       <>
@@ -248,6 +301,11 @@ export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer =
             onSelect={onSelect}
             onClose={onClose}
             isDrawer
+            fontSize={fontSize}
+            onFontIncrease={onFontIncrease}
+            onFontDecrease={onFontDecrease}
+            fontSizeMin={fontSizeMin}
+            fontSizeMax={fontSizeMax}
           />
         </div>
       </>
@@ -263,6 +321,11 @@ export function Sidebar({ selection, onSelect, open = false, onClose, isDrawer =
         selection={selection}
         onSelect={onSelect}
         onCollapse={onCollapse}
+        fontSize={fontSize}
+        onFontIncrease={onFontIncrease}
+        onFontDecrease={onFontDecrease}
+        fontSizeMin={fontSizeMin}
+        fontSizeMax={fontSizeMax}
       />
     </div>
   );

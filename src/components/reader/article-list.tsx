@@ -14,9 +14,10 @@ interface ArticleListProps {
   feedType?: string | null;
   mainRef: React.RefObject<HTMLElement | null>;
   onOpenArticle: (article: Article) => void;
+  fontSize?: number;
 }
 
-export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: ArticleListProps) {
+export function ArticleList({ feedId, feedType, mainRef, onOpenArticle, fontSize = 14 }: ArticleListProps) {
   const queryClient = useQueryClient();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [markingAll, setMarkingAll] = useState(false);
@@ -58,6 +59,7 @@ export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: Articl
     readIdsRef.current = next;
     try { sessionStorage.setItem("readIds", JSON.stringify([...next])); } catch {}
     setReadIds(next);
+    flushToDB(ids);
   }, []);
 
   const handleScrollRead = useCallback((ids: string[]) => markRead(ids), [markRead]);
@@ -66,14 +68,16 @@ export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: Articl
     markRead([id]);
   }, [markRead]);
 
-  // Flush pending reads to DB (fire-and-forget)
+  // Flush pending reads to DB and update sidebar counter
   function flushToDB(ids: string[]) {
     if (ids.length === 0) return;
     fetch("/api/read", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ articleIds: ids }),
-    }).catch(() => {});
+    })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["feeds"] }))
+      .catch(() => {});
   }
 
   // "Completar sección": flush all visible articles to DB then refresh
@@ -215,7 +219,7 @@ export function ArticleList({ feedId, feedType, mainRef, onOpenArticle }: Articl
   }
 
   return (
-    <div className="space-y-3 pb-8">
+    <div className="space-y-3 pb-8" style={{ "--reader-fs": `${fontSize}px` } as React.CSSProperties}>
       {allArticles.map((article) => (
         <ArticleCard
           key={article.id}

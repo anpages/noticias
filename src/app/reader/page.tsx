@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { ArticleList } from "@/components/reader/article-list";
 import { ArticleModal } from "@/components/reader/article-modal";
 import { useIsDesktop } from "@/hooks/use-is-desktop";
+import { useFontSize } from "@/hooks/use-font-size";
 import type { Article } from "@/hooks/use-articles";
 
 export default function ReaderPage() {
@@ -21,6 +22,7 @@ export default function ReaderPage() {
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
   const mainRef = useRef<HTMLElement>(null);
   const isDesktop = useIsDesktop();
+  const { fontSize, increase, decrease, isMin, isMax } = useFontSize();
 
   function handleSelect(value: string | null) {
     setSelection(value);
@@ -55,6 +57,11 @@ export default function ReaderPage() {
               selection={selection}
               onSelect={handleSelect}
               onCollapse={() => { setSidebarVisible(false); localStorage.setItem("sidebar", "hidden"); }}
+              fontSize={fontSize}
+              onFontIncrease={increase}
+              onFontDecrease={decrease}
+              fontSizeMin={isMin}
+              fontSizeMax={isMax}
             />
           </div>
         )}
@@ -66,6 +73,11 @@ export default function ReaderPage() {
             isDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
+            fontSize={fontSize}
+            onFontIncrease={increase}
+            onFontDecrease={decrease}
+            fontSizeMin={isMin}
+            fontSizeMax={isMax}
           />
         )}
 
@@ -80,6 +92,7 @@ export default function ReaderPage() {
               feedType={feedType}
               mainRef={mainRef}
               onOpenArticle={setOpenArticle}
+              fontSize={fontSize}
             />
           </div>
         </main>

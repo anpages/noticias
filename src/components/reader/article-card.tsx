@@ -75,8 +75,8 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
         </div>
 
         {/* Title — gray when read, dark when unread */}
-        <h2 className={cn(
-          "text-sm font-semibold leading-snug transition-colors duration-300",
+        <h2 style={{ fontSize: "var(--reader-fs, 14px)" }} className={cn(
+          "font-semibold leading-snug transition-colors duration-300",
           isRead
             ? "text-neutral-400 dark:text-neutral-500"
             : "text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400"
@@ -86,7 +86,7 @@ export function ArticleCard({ article, isRead, onObserve, onUnobserve, onMarkRea
 
         {/* Summary */}
         {article.summary && (
-          <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+          <p style={{ fontSize: "var(--reader-fs, 14px)" }} className="mt-1.5 text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
             {article.summary}
           </p>
         )}

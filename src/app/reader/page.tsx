@@ -101,6 +101,7 @@ export default function ReaderPage() {
       <ArticleModal
         article={openArticle}
         onClose={() => setOpenArticle(null)}
+        fontSize={fontSize}
       />
     </div>
   );

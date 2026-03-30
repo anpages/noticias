@@ -8,9 +8,10 @@ import type { Article } from "@/hooks/use-articles";
 interface ArticleModalProps {
   article: Article | null;
   onClose: () => void;
+  fontSize?: number;
 }
 
-export function ArticleModal({ article, onClose }: ArticleModalProps) {
+export function ArticleModal({ article, onClose, fontSize = 14 }: ArticleModalProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -80,7 +81,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
       </header>
 
       {/* Scrollable body */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", "--reader-fs": `${fontSize}px` } as React.CSSProperties}>
         <div className="max-w-2xl mx-auto px-4 py-8 pb-16">
           {/* Meta */}
           <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -100,7 +101,7 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
           </p>
 
           {/* Title */}
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 leading-snug mb-6">
+          <h1 style={{ fontSize: `calc(var(--reader-fs, 14px) * 1.7)` }} className="font-bold text-neutral-900 dark:text-neutral-100 leading-snug mb-6">
             {article.title}
           </h1>
 
@@ -112,7 +113,8 @@ export function ArticleModal({ article, onClose }: ArticleModalProps) {
             </div>
           ) : content ? (
             <div
-              className="prose prose-neutral dark:prose-invert prose-sm sm:prose-base max-w-none prose-img:rounded-lg prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-headings:font-bold prose-p:leading-relaxed"
+              style={{ fontSize: "var(--reader-fs, 14px)" }}
+              className="prose prose-neutral dark:prose-invert max-w-none prose-img:rounded-lg prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-headings:font-bold prose-p:leading-relaxed"
               dangerouslySetInnerHTML={{ __html: content }}
             />
           ) : (

@@ -15,6 +15,7 @@ export function ArticleModal({ article, onClose, fontSize = 14 }: ArticleModalPr
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [retries, setRetries] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Push a history entry so the back button closes the modal
@@ -37,6 +38,7 @@ export function ArticleModal({ article, onClose, fontSize = 14 }: ArticleModalPr
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
     setContent(null);
     setFailed(false);
+    setRetries(0);
     setLoading(true);
     fetch(`/api/articles/${article.id}/content`)
       .then((r) => r.json())
@@ -118,34 +120,52 @@ export function ArticleModal({ article, onClose, fontSize = 14 }: ArticleModalPr
               dangerouslySetInnerHTML={{ __html: content }}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-              {failed && (
-                <button
-                  onClick={() => {
-                    setFailed(false);
-                    setLoading(true);
-                    fetch(`/api/articles/${article.id}/content`)
-                      .then((r) => r.json())
-                      .then((d) => { setContent(d.content ?? null); if (!d.content) setFailed(true); })
-                      .catch(() => setFailed(true))
-                      .finally(() => setLoading(false));
-                  }}
-                  className="flex items-center gap-2 text-sm text-blue-500 hover:text-blue-600 transition-colors"
-                >
-                  <RefreshCw size={14} /> Reintentar
-                </button>
+            <div className="flex flex-col gap-6">
+              {/* Summary fallback — show if available */}
+              {article.summary && (
+                <p style={{ fontSize: "var(--reader-fs, 14px)" }}
+                  className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                  {article.summary}
+                </p>
               )}
-              {article.url && (
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shadow-sm"
-                >
-                  <ExternalLink size={14} />
-                  Abrir artículo original
-                </a>
-              )}
+
+              <div className={`flex flex-col items-center gap-3 text-center ${article.summary ? "pt-2 border-t border-neutral-100 dark:border-neutral-800" : "py-12"}`}>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500">
+                  {retries > 0
+                    ? "El sitio no permite leer el contenido desde aquí."
+                    : "No se pudo cargar el contenido completo."}
+                </p>
+                <div className="flex items-center gap-3 flex-wrap justify-center">
+                  {retries < 2 && (
+                    <button
+                      onClick={() => {
+                        setFailed(false);
+                        setRetries((r) => r + 1);
+                        setLoading(true);
+                        fetch(`/api/articles/${article.id}/content`)
+                          .then((r) => r.json())
+                          .then((d) => { setContent(d.content ?? null); if (!d.content) setFailed(true); })
+                          .catch(() => setFailed(true))
+                          .finally(() => setLoading(false));
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
+                    >
+                      <RefreshCw size={12} /> Reintentar
+                    </button>
+                  )}
+                  {article.url && (
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shadow-sm"
+                    >
+                      <ExternalLink size={14} />
+                      Abrir artículo original
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
